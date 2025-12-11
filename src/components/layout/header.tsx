@@ -21,28 +21,31 @@ export function Header() {
           {!loading &&
             (user ? (
               <>
-                <Link href="/profile" passHref>
-                    <Button asChild variant="ghost" >
-                        <div><LayoutDashboard className="h-5 w-5 sm:mr-2" /><span className="hidden sm:inline">Dashboard</span></div>
-                    </Button>
-                </Link>
+                <Button asChild variant="ghost">
+                  <Link href="/profile">
+                    <LayoutDashboard className="h-5 w-5 sm:mr-2" />
+                    <span className="hidden sm:inline">Dashboard</span>
+                  </Link>
+                </Button>
               </>
             ) : (
               <>
-                <Link href="/login" passHref>
-                    <Button asChild variant="ghost">
-                         <div><LogIn className="h-5 w-5 sm:mr-2" /><span className="hidden sm:inline">Login</span></div>
-                    </Button>
-                </Link>
-                <Link href="/register" passHref>
-                    <Button asChild>
-                        <div><UserPlus className="h-5 w-5 sm:mr-2" /><span className="hidden sm:inline">Sign Up</span></div>
-                    </Button>
-                </Link>
+                <Button asChild variant="ghost">
+                  <Link href="/login">
+                    <LogIn className="h-5 w-5 sm:mr-2" />
+                    <span className="hidden sm:inline">Login</span>
+                  </Link>
+                </Button>
+                <Button asChild>
+                  <Link href="/register">
+                    <UserPlus className="h-5 w-5 sm:mr-2" />
+                    <span className="hidden sm:inline">Sign Up</span>
+                  </Link>
+                </Button>
               </>
             ))}
             <Link href="/leaderboard" passHref>
-                <Button asChild variant="ghost" size="icon" aria-label="Leaderboard">
+                <Button variant="ghost" size="icon" aria-label="Leaderboard">
                     <Trophy className="h-5 w-5" />
                 </Button>
             </Link>
