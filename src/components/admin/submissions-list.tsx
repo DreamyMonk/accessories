@@ -8,8 +8,6 @@ import {
   updateDoc,
   runTransaction,
   serverTimestamp,
-  writeBatch,
-  addDoc,
 } from 'firebase/firestore';
 import { useCollection, useFirestore, useDoc } from '@/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -66,6 +64,7 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
       
     const userRef = doc(firestore, 'users', contribution.submittedBy);
     const contributionRef = doc(firestore, 'contributions', contribution.id);
+    const newAccessoryRef = doc(collection(firestore, "accessories"));
 
     try {
       await runTransaction(firestore, async (transaction) => {
@@ -75,7 +74,7 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
           throw new Error(`User with ID ${contribution.submittedBy} not found.`);
         }
         
-        // 1. Create the new accessory object from the contribution data
+        // 1. Explicitly build the new accessory object to match the schema
         const newAccessoryData = {
           primaryModel: contribution.primaryModel,
           accessoryType: contribution.accessoryType,
@@ -85,21 +84,16 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
           lastUpdated: serverTimestamp(),
           contributor: {
             name: userDoc.data().displayName || 'Anonymous',
-            points: 10,
+            points: 10, // Awarding 10 points for an approved contribution
           },
         };
 
-        // We need a ref for the new document inside the transaction
-        const newAccessoryRef = doc(collection(firestore, "accessories"));
-        
-        // 2. Set the new accessory document
-        transaction.set(newAccessoryRef, newAccessoryData);
-
-        // 3. Update the user's points
+        // 2. Calculate new points for the user
         const newPoints = (userDoc.data().points || 0) + 10;
-        transaction.update(userRef, { points: newPoints });
         
-        // 4. Update the original contribution's status
+        // 3. Perform all writes in the transaction
+        transaction.set(newAccessoryRef, newAccessoryData);
+        transaction.update(userRef, { points: newPoints });
         transaction.update(contributionRef, { status: 'approved' });
       });
 
