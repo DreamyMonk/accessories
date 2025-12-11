@@ -98,7 +98,7 @@ export default function ContributePage() {
           <CardContent>
             <p className="text-muted-foreground mb-4">You need to be signed in to contribute.</p>
             <Button asChild>
-              <Link href="/profile">Sign In</Link>
+              <Link href="/login">Sign In</Link>
             </Button>
           </CardContent>
         </Card>

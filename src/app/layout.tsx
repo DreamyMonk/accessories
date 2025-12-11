@@ -1,10 +1,9 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { Header } from '@/components/layout/header';
-import { BottomNav } from '@/components/layout/bottom-nav';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
+import { AppLayout } from '@/components/layout/app-layout';
 
 export const metadata: Metadata = {
   title: 'AccessoryAce',
@@ -37,9 +36,9 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <FirebaseClientProvider>
           <FirebaseErrorListener />
-          <div className="relative flex min-h-screen w-full flex-col">
-            <main className="flex-1">{children}</main>
-          </div>
+          <AppLayout>
+            {children}
+          </AppLayout>
           <Toaster />
         </FirebaseClientProvider>
       </body>

@@ -13,9 +13,9 @@ import {
   SidebarFooter,
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/logo';
-import { Home, LoaderCircle, Shield, ShieldX, Users } from 'lucide-react';
+import { Home, LoaderCircle, LogOut, Shield, Users } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useUser, useDoc, useFirestore, useAuth } from '@/firebase';
@@ -28,6 +28,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
   const auth = useAuth();
@@ -39,9 +40,12 @@ export default function AdminLayout({
   const isAdmin = userData?.role === 'admin';
 
   const handleSignOut = async () => {
+    if (!auth) return;
     await signOut(auth);
+    router.push('/admin/login');
   }
-
+  
+  // If we're loading, show a spinner.
   if (isLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
@@ -50,10 +54,23 @@ export default function AdminLayout({
     );
   }
 
-  if (!isAdmin) {
-    return (
+  // If the user is not logged in, redirect them to the admin login page,
+  // unless they are already on it.
+  if (!user && pathname !== '/admin/login') {
+     router.push('/admin/login');
+     return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <LoaderCircle className="h-12 w-12 animate-spin" />
+        </div>
+     );
+  }
+
+  // If the user is logged in but not an admin, show access denied page,
+  // unless they are on the login page.
+  if (user && !isAdmin && pathname !== '/admin/login') {
+     return (
       <div className="flex h-screen w-full flex-col items-center justify-center gap-4 p-4 text-center">
-         <ShieldX className="h-16 w-16 text-destructive" />
+        <Shield className="h-16 w-16 text-destructive" />
         <h1 className="text-2xl font-bold">Access Denied</h1>
         <p className="text-muted-foreground">
           You do not have permission to view this page.
@@ -67,7 +84,13 @@ export default function AdminLayout({
       </div>
     );
   }
+  
+  // If user is on the login page, just show the content (the login form).
+  if(pathname === '/admin/login') {
+    return <>{children}</>
+  }
 
+  // If we've passed all checks, show the admin panel.
   return (
     <SidebarProvider>
       <Sidebar>
@@ -121,18 +144,20 @@ export default function AdminLayout({
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
-          <div className="flex items-center gap-2">
-            <Avatar>
-              <AvatarImage src={user?.photoURL || undefined} />
-              <AvatarFallback>{user?.displayName?.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold">{user?.displayName}</span>
-              <Button variant="link" size="sm" className="h-auto p-0 text-xs text-muted-foreground" onClick={handleSignOut}>
-                Sign Out
-              </Button>
+          {user && (
+            <div className="flex items-center gap-2">
+              <Avatar>
+                <AvatarImage src={user.photoURL || undefined} />
+                <AvatarFallback>{user.displayName?.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold">{user.displayName}</span>
+                 <Button variant="link" size="sm" className="h-auto p-0 text-xs text-muted-foreground" onClick={handleSignOut}>
+                  Sign Out
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
