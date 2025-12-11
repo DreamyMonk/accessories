@@ -58,9 +58,10 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
 
   const handleApprove = async (id: string, contribution: any) => {
     if (!firestore) return;
-      const { status, submittedAt, submittedBy, ...accessoryData } = contribution;
+      
       const accessoryCollectionRef = collection(firestore, 'accessories');
-      const userRef = doc(firestore, 'users', submittedBy);
+      const userRef = doc(firestore, 'users', contribution.submittedBy);
+      const contributionRef = doc(firestore, 'contributions', id);
 
       try {
         await runTransaction(firestore, async (transaction) => {
@@ -68,6 +69,8 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
           if (!userDoc.exists()) {
             throw "User document does not exist!";
           }
+
+          const { status, submittedAt, submittedBy, ...accessoryData } = contribution;
 
           const newAccessoryRef = doc(accessoryCollectionRef);
           transaction.set(newAccessoryRef, {
@@ -82,7 +85,6 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
           const newPoints = (userDoc.data().points || 0) + 10;
           transaction.update(userRef, { points: newPoints });
           
-          const contributionRef = doc(firestore, 'contributions', id);
           transaction.update(contributionRef, { status: 'approved' });
         });
 
