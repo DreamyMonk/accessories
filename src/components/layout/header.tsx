@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LogIn, UserPlus, LayoutDashboard, Trophy } from "lucide-react";
+import { LogIn, PlusCircle, LayoutDashboard, Trophy } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/firebase";
@@ -36,18 +36,18 @@ export function Header() {
                     <span className="hidden sm:inline">Login</span>
                   </Link>
                 </Button>
-                <Button asChild>
-                  <Link href="/register">
-                    <UserPlus className="h-5 w-5 sm:mr-2" />
-                    <span className="hidden sm:inline">Sign Up</span>
-                  </Link>
-                </Button>
               </>
             ))}
+            <Button asChild>
+              <Link href="/contribute">
+                <PlusCircle className="h-5 w-5 sm:mr-2" />
+                <span className="hidden sm:inline">Contribute</span>
+              </Link>
+            </Button>
             <Link href="/leaderboard">
-                <Button variant="ghost" size="icon" aria-label="Leaderboard">
-                    <Trophy className="h-5 w-5" />
-                </Button>
+              <Button variant="ghost" size="icon" aria-label="Leaderboard">
+                  <Trophy className="h-5 w-5" />
+              </Button>
             </Link>
         </div>
       </div>

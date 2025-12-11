@@ -11,10 +11,10 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { signOut } from 'firebase/auth';
-import { LoaderCircle, LogOut } from 'lucide-react';
+import { LoaderCircle, LogOut, PlusCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { doc, setDoc } from 'firebase/firestore';
-import { useEffect, useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useDoc } from '@/firebase';
 import Link from 'next/link';
 
@@ -86,7 +86,10 @@ export default function ProfilePage() {
              <p className="text-sm text-muted-foreground">Your points</p>
              <p className="text-4xl font-bold text-primary">{userData.points || 0}</p>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex flex-col gap-2">
+            <Button asChild className="w-full">
+                <Link href="/contribute"><PlusCircle className="mr-2 h-4 w-4" /> Contribute Data</Link>
+            </Button>
             <Button variant="outline" className="w-full" onClick={handleSignOut}>
               <LogOut className="mr-2 h-4 w-4" /> Sign Out
             </Button>
