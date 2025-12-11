@@ -41,6 +41,7 @@ export function SearchClient({ categories }: { categories: string[] }) {
   const [activeCategory, setActiveCategory] = useState(categories[0]);
   const [isLoading, setIsLoading] = useState(true);
   const [results, setResults] = useState<Accessory[] | null>(null);
+  const [hasSearched, setHasSearched] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<FuzzyAccessorySearchOutput | null>(
     null
   );
@@ -70,28 +71,29 @@ export function SearchClient({ categories }: { categories: string[] }) {
     useCollection(accessoriesQuery);
 
   const performSearch = useCallback(
-    async (currentSearchTerm: string, accessoriesData: Accessory[] | null) => {
-      if (!accessoriesData) {
+    async (currentSearchTerm: string) => {
+      if (!accessories) {
         setResults(null);
         setIsLoading(false);
         return;
       }
       
       setIsLoading(true);
+      setHasSearched(true);
       setResults(null);
       setAiSuggestions(null);
 
+      // Simulate API call for local filtering feel
+      await new Promise(resolve => setTimeout(resolve, 300));
+
       if (currentSearchTerm.length < 2) {
-        setResults(accessoriesData);
+        setResults(accessories);
         setIsLoading(false);
         return;
       }
-
-      // Simulate API call for local filtering feel
-      await new Promise(resolve => setTimeout(resolve, 300));
       
       const searchLower = currentSearchTerm.toLowerCase();
-      const filteredResults = accessoriesData.filter(
+      const filteredResults = accessories.filter(
         (acc) =>
           acc.primaryModel.toLowerCase().includes(searchLower) ||
           (acc.brand && acc.brand.toLowerCase().includes(searchLower)) ||
@@ -101,27 +103,33 @@ export function SearchClient({ categories }: { categories: string[] }) {
       setResults(filteredResults);
       setIsLoading(false);
     },
-    [activeCategory]
+    [accessories]
   );
   
   useEffect(() => {
     setIsLoading(accessoriesLoading);
     if (!accessoriesLoading && accessories) {
-      // Set initial results when data loads
-      setResults(accessories);
+      // Set initial results when data loads, but don't show them until search
+       setResults(accessories);
     }
   }, [accessories, accessoriesLoading]);
 
 
   const onSubmit = (data: SearchFormValues) => {
-    performSearch(data.searchTerm, accessories);
+    performSearch(data.searchTerm);
   };
 
   const handleCategoryChange = (category: string) => {
     setActiveCategory(category);
     form.setValue('searchTerm', '');
-    setResults(accessories ? accessories.filter(a => a.accessoryType === category) : null);
+    setResults(null); // Clear results when category changes
+    setHasSearched(false); // Reset search status
     setAiSuggestions(null);
+    
+    // Re-filter accessories for the new category
+    if(accessories) {
+      setResults(accessories.filter(a => a.accessoryType === category));
+    }
   }
 
   const formatTimestamp = (timestamp: any) => {
@@ -205,14 +213,14 @@ export function SearchClient({ categories }: { categories: string[] }) {
       </section>
 
       <section className="min-h-[200px]">
-        {isLoading && (
+        {isLoading && hasSearched && (
           <div className="space-y-4">
             <Skeleton className="h-48 w-full rounded-lg" />
             <Skeleton className="h-48 w-full rounded-lg" />
           </div>
         )}
         
-        {!isLoading && results && results.length > 0 && (
+        {!isLoading && results && results.length > 0 && hasSearched && (
            <div className="space-y-4">
             <h2 className="font-headline text-2xl font-bold">{results.length} Match(es) Found</h2>
             {results.map((result, i) => (
@@ -225,7 +233,7 @@ export function SearchClient({ categories }: { categories: string[] }) {
           </div>
         )}
 
-        {!isLoading && (!results || results.length === 0) && (
+        {!isLoading && hasSearched && (!results || results.length === 0) && (
           <Card>
             <CardContent className="p-6 text-center">
               <p className="text-muted-foreground">No accessories found for your search. Try another category or a broader search term.</p>
