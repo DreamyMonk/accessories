@@ -5,11 +5,26 @@ import { CsvUploadForm } from "@/components/admin/csv-upload-form";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import Link from "next/link";
+import { ManualAddForm } from "@/components/admin/manual-add-form";
 
 export default function AdminPage() {
+  const categories = ['Tempered Glass', 'Cases & Covers', 'Batteries', 'Chargers', 'Cables'];
+  
   return (
     <div className="space-y-8">
       <AdminDashboard />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Add Accessory Manually</CardTitle>
+          <CardDescription>
+            Add a single accessory directly to the database.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ManualAddForm categories={categories} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

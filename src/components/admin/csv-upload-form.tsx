@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useFirestore } from '@/firebase';
-import { addDoc, collection, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, serverTimestamp, writeBatch, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -39,8 +39,14 @@ export function CsvUploadForm() {
     reader.onload = async (event) => {
       const csvData = event.target?.result as string;
       const lines = csvData.split('\n').filter(line => line.trim() !== '');
-      // Remove header row
-      lines.shift();
+      const header = lines.shift()?.split(',').map(h => h.trim());
+      
+      const requiredHeaders = ['primaryModel', 'accessoryType', 'compatibleModels', 'brand', 'source'];
+      if (!header || !requiredHeaders.every(h => header.includes(h))) {
+        toast({ title: 'Error', description: `CSV must contain the following headers: ${requiredHeaders.join(', ')}`, variant: 'destructive' });
+        setIsUploading(false);
+        return;
+      }
 
       if (lines.length === 0) {
         toast({ title: 'Warning', description: 'CSV file is empty or contains only a header.', variant: 'destructive' });
@@ -53,7 +59,11 @@ export function CsvUploadForm() {
         const accessoriesCollectionRef = collection(firestore, 'accessories');
 
         lines.forEach((line) => {
-          const [primaryModel, accessoryType, compatibleModelsStr, brand, source] = line.split(',').map(field => field.trim());
+          const values = line.split(',').map(field => field.trim());
+          const accessoryRow: { [key: string]: string } = {};
+          header.forEach((h, i) => accessoryRow[h] = values[i]);
+          
+          const { primaryModel, accessoryType, compatibleModels: compatibleModelsStr, brand, source } = accessoryRow;
           
           if (primaryModel && accessoryType && compatibleModelsStr) {
             const compatibleModels = compatibleModelsStr.split(';').map(m => m.trim());
@@ -80,13 +90,13 @@ export function CsvUploadForm() {
           title: 'Upload Successful',
           description: `${lines.length} accessories have been added.`,
         });
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error uploading CSV data:', error);
-        // We can't easily determine the exact failing doc in a batch write for the permission error context
+        
         const permissionError = new FirestorePermissionError({
           path: 'accessories',
           operation: 'create',
-          requestResourceData: {note: 'Batch operation failed, see console for details'}
+          requestResourceData: {note: `Batch operation failed. Error: ${error.message}`}
         });
         errorEmitter.emit('permission-error', permissionError);
 
@@ -97,6 +107,8 @@ export function CsvUploadForm() {
         });
       } finally {
         setIsUploading(false);
+        const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+        if(fileInput) fileInput.value = '';
         setFile(null);
       }
     };
@@ -119,11 +131,16 @@ export function CsvUploadForm() {
         className="w-full sm:w-auto"
       >
         {isUploading ? (
-          <LoaderCircle className="animate-spin" />
+          <>
+            <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+            Uploading...
+          </>
         ) : (
-          <Upload className="mr-2 h-4 w-4" />
+          <>
+            <Upload className="mr-2 h-4 w-4" />
+            Upload CSV
+          </>
         )}
-        Upload CSV
       </Button>
     </div>
   );
