@@ -4,8 +4,9 @@ import { Award, Medal, Trophy } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useEffect, useState } from "react";
 import { AppLayout } from "@/components/layout/app-layout";
+import { useMemo } from 'react';
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const mockLeaderboard = [
   { rank: 1, name: "Rahul Sharma", points: 1256, avatar: "https://picsum.photos/seed/1/150/150", imageHint: 'person portrait' },
@@ -17,37 +18,35 @@ const mockLeaderboard = [
   { rank: 7, name: "Amit Mishra", points: 512, avatar: "https://picsum.photos/seed/7/150/150", imageHint: 'person portrait' },
 ];
 
-const rankIcons: {[key: number]: React.ReactNode } = {
-  1: <Trophy key="1" className="text-yellow-400" />,
-  2: <Medal key="2" className="text-slate-400" />,
-  3: <Award key="3" className="text-yellow-600" />,
-};
-
 export default function LeaderboardPage() {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkIsMobile();
-    window.addEventListener('resize', checkIsMobile);
-    return () => window.removeEventListener('resize', checkIsMobile);
-  }, []);
+  const isMobile = useIsMobile();
 
   const topThree = mockLeaderboard.slice(0, 3);
   const rest = mockLeaderboard.slice(3);
 
-  const getOrderedTopThree = () => {
+  const orderedTopThree = useMemo(() => {
+    if (isMobile === undefined) return []; // Don't render on server or before hydration
     if (isMobile) {
       return topThree;
     }
     // Desktop order: 2nd, 1st, 3rd
     const [first, second, third] = topThree;
     return [second, first, third];
-  };
+  }, [isMobile, topThree]);
 
-  const orderedTopThree = getOrderedTopThree();
+  // Prevent flash of incorrectly ordered items
+  if (isMobile === undefined) {
+    return (
+       <AppLayout>
+          <div className="container mx-auto px-4 py-6">
+            <div className="text-center mb-8">
+              <h1 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">Top Contributors</h1>
+              <p className="text-muted-foreground mt-2">Thanks to our community for making AccessoryAce better!</p>
+            </div>
+          </div>
+       </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
