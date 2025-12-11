@@ -17,27 +17,32 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '../ui/badge';
 import { Check, Clock, X } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
+import { useMemo } from 'react';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export function AdminDashboard() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const contributionsQuery = firestore
-    ? query(
+  const contributionsQuery = useMemo(() => {
+      if (!firestore) return null;
+      return query(
         collection(firestore, 'contributions'),
         where('status', '==', 'pending')
       )
-    : null;
+    }, [firestore]
+  );
 
   const { data: contributions, loading, error } = useCollection(contributionsQuery);
 
   const handleApprove = async (id: string, contribution: any) => {
     if (!firestore) return;
-    try {
       const { status, submittedAt, ...accessoryData } = contribution;
+      const accessoryCollectionRef = collection(firestore, 'accessories');
 
       // Add to main accessories collection
-      await addDoc(collection(firestore, 'accessories'), {
+      addDoc(accessoryCollectionRef, {
         ...accessoryData,
         lastUpdated: serverTimestamp(),
         // In a real app, you'd associate this with the user who contributed it
@@ -45,45 +50,48 @@ export function AdminDashboard() {
           name: 'Community User',
           points: 10,
         },
+      }).catch(serverError => {
+        const permissionError = new FirestorePermissionError({
+          path: accessoryCollectionRef.path,
+          operation: 'create',
+          requestResourceData: accessoryData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
       });
 
       // Update the status of the contribution
       const contributionRef = doc(firestore, 'contributions', id);
-      await updateDoc(contributionRef, { status: 'approved' });
+      updateDoc(contributionRef, { status: 'approved' }).catch(serverError => {
+         const permissionError = new FirestorePermissionError({
+          path: contributionRef.path,
+          operation: 'update',
+          requestResourceData: { status: 'approved' },
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
 
       toast({
         title: 'Approved!',
         description: 'The contribution has been added to the main database.',
       });
-    } catch (e) {
-      console.error(e);
-      toast({
-        title: 'Error',
-        description: 'Could not approve the contribution.',
-        variant: 'destructive',
-      });
-    }
   };
 
   const handleReject = async (id: string) => {
     if (!firestore) return;
-    try {
       const contributionRef = doc(firestore, 'contributions', id);
       // You could also update the status to 'rejected' if you want to keep a record
-      await deleteDoc(contributionRef);
+      deleteDoc(contributionRef).catch(serverError => {
+        const permissionError = new FirestorePermissionError({
+          path: contributionRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
       toast({
         title: 'Rejected',
         description: 'The contribution has been removed.',
         variant: 'destructive',
       });
-    } catch (e) {
-      console.error(e);
-      toast({
-        title: 'Error',
-        description: 'Could not reject the contribution.',
-        variant: 'destructive',
-      });
-    }
   };
 
   return (
