@@ -1,5 +1,5 @@
 'use client';
-import { useAuth } from '@/firebase';
+import { useAuth, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -9,21 +9,70 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { GoogleAuthProvider, signInWithRedirect } from 'firebase/auth';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { LoaderCircle } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
 
-const provider = new GoogleAuthProvider();
+const registerSchema = z.object({
+  displayName: z.string().min(3, 'Display name must be at least 3 characters.'),
+  email: z.string().email('Please enter a valid email address.'),
+  password: z.string().min(6, 'Password must be at least 6 characters.'),
+});
+
+type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const auth = useAuth();
+  const { user, loading } = useUser();
+  const router = useRouter();
+  const { toast } = useToast();
 
-  const handleSignUp = async () => {
+  const form = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { displayName: '', email: '', password: '' },
+  });
+
+  useEffect(() => {
+    if (user) {
+      router.push('/profile');
+    }
+  }, [user, router]);
+
+
+  const handleSignUp = async (data: RegisterFormValues) => {
+    if (!auth) return;
     try {
-      await signInWithRedirect(auth, provider);
-    } catch (error) {
-      console.error('Error signing up with Google: ', error);
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      await updateProfile(userCredential.user, {
+        displayName: data.displayName,
+      });
+      // The useUser hook and useEffect on profile page will handle document creation
+      router.push('/profile');
+    } catch (error: any) {
+      console.error('Error signing up:', error);
+      toast({
+        title: 'Sign-up Failed',
+        description: error.message || 'An unexpected error occurred.',
+        variant: 'destructive',
+      });
     }
   };
+  
+  if (loading || user) {
+    return (
+      <div className="flex h-[80vh] w-full items-center justify-center">
+        <LoaderCircle className="h-12 w-12 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto flex h-[80vh] items-center justify-center px-4">
@@ -35,24 +84,52 @@ export default function RegisterPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button className="w-full" onClick={handleSignUp}>
-            <svg
-              className="mr-2 h-4 w-4"
-              aria-hidden="true"
-              focusable="false"
-              data-prefix="fab"
-              data-icon="google"
-              role="img"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 488 512"
-            >
-              <path
-                fill="currentColor"
-                d="M488 261.8C488 403.3 381.5 512 244 512 109.8 512 0 402.2 0 256S109.8 0 244 0c73 0 135.3 29.7 181.5 77.3L375 152.9C341.5 123.5 298.8 104 244 104c-82.3 0-149.2 67.2-149.2 150s66.9 150 149.2 150c94.9 0 131.3-64.4 136.8-98.2H244v-73.4h235.3c2.4 12.5 4.7 24.4 4.7 37.8z"
-              ></path>
-            </svg>
-            Sign up with Google
-          </Button>
+           <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSignUp)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="displayName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Display Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="John Doe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="name@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? <LoaderCircle className="animate-spin" /> : 'Create Account'}
+              </Button>
+            </form>
+          </Form>
         </CardContent>
         <CardFooter className="justify-center text-sm">
           <p>

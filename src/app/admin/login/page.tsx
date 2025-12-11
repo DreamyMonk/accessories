@@ -8,18 +8,37 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { GoogleAuthProvider, signInWithRedirect } from 'firebase/auth';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { LoaderCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { LoaderCircle } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
 import { Logo } from '@/components/logo';
 
-const provider = new GoogleAuthProvider();
+const loginSchema = z.object({
+  email: z.string().email('Please enter a valid email address.'),
+  password: z.string().min(1, 'Password is required.'),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
+
 
 export default function AdminLoginPage() {
   const auth = useAuth();
   const { user, loading } = useUser();
   const router = useRouter();
+  const { toast } = useToast();
+
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
+
 
   useEffect(() => {
     if (user) {
@@ -28,12 +47,18 @@ export default function AdminLoginPage() {
   }, [user, router]);
 
 
-  const handleSignIn = async () => {
+  const handleSignIn = async (data: LoginFormValues) => {
     if(!auth) return;
     try {
-      await signInWithRedirect(auth, provider);
-    } catch (error) {
-      console.error('Error signing in with Google: ', error);
+      await signInWithEmailAndPassword(auth, data.email, data.password);
+      router.push('/admin');
+    } catch (error: any) {
+      console.error('Error signing in:', error);
+      toast({
+        title: 'Sign-in Failed',
+        description: 'Please check your email and password.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -58,24 +83,39 @@ export default function AdminLoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button className="w-full" onClick={handleSignIn}>
-            <svg
-              className="mr-2 h-4 w-4"
-              aria-hidden="true"
-              focusable="false"
-              data-prefix="fab"
-              data-icon="google"
-              role="img"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 488 512"
-            >
-              <path
-                fill="currentColor"
-                d="M488 261.8C488 403.3 381.5 512 244 512 109.8 512 0 402.2 0 256S109.8 0 244 0c73 0 135.3 29.7 181.5 77.3L375 152.9C341.5 123.5 298.8 104 244 104c-82.3 0-149.2 67.2-149.2 150s66.9 150 149.2 150c94.9 0 131.3-64.4 136.8-98.2H244v-73.4h235.3c2.4 12.5 4.7 24.4 4.7 37.8z"
-              ></path>
-            </svg>
-            Sign in with Google
-          </Button>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSignIn)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="admin@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? <LoaderCircle className="animate-spin" /> : 'Sign In'}
+              </Button>
+            </form>
+          </Form>
         </CardContent>
       </Card>
     </div>
