@@ -10,7 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { useFirestore } from "@/firebase";
+import { useFirestore, useUser } from "@/firebase";
+import Link from "next/link";
+import { LoaderCircle } from "lucide-react";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 const contributionSchema = z.object({
   accessoryType: z.string().min(3, "Accessory type must be at least 3 characters."),
@@ -23,6 +27,7 @@ type ContributionFormValues = z.infer<typeof contributionSchema>;
 export default function ContributePage() {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { user, loading } = useUser();
 
   const form = useForm<ContributionFormValues>({
     resolver: zodResolver(contributionSchema),
@@ -34,37 +39,72 @@ export default function ContributePage() {
   });
 
   const onSubmit = async (data: ContributionFormValues) => {
-    if (!firestore) {
+    if (!firestore || !user) {
       toast({
         title: "Error",
-        description: "Firestore is not available. Please try again later.",
+        description: "You must be logged in to contribute.",
         variant: "destructive",
       });
       return;
     }
+    
+    const contributionData = {
+      ...data,
+      compatibleModels: data.compatibleModels.split('\n').map(m => m.trim()).filter(Boolean),
+      status: "pending",
+      submittedAt: serverTimestamp(),
+      submittedBy: user.uid,
+    };
 
-    try {
-      await addDoc(collection(firestore, "contributions"), {
-        ...data,
-        compatibleModels: data.compatibleModels.split('\n').map(m => m.trim()).filter(Boolean),
-        status: "pending",
-        submittedAt: serverTimestamp(),
-      });
+    const contributionsCollectionRef = collection(firestore, "contributions");
+    addDoc(contributionsCollectionRef, contributionData)
+    .then(() => {
+        toast({
+          title: "Submission Received!",
+          description: "Thank you for your contribution. It will be reviewed shortly.",
+        });
+        form.reset();
+    }).catch(error => {
+        const permissionError = new FirestorePermissionError({
+            path: contributionsCollectionRef.path,
+            operation: 'create',
+            requestResourceData: contributionData
+        });
+        errorEmitter.emit('permission-error', permissionError);
 
-      toast({
-        title: "Submission Received!",
-        description: "Thank you for your contribution. It will be reviewed shortly.",
-      });
-      form.reset();
-    } catch (error) {
-      console.error("Error submitting contribution:", error);
-      toast({
-        title: "Submission Failed",
-        description: "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
-    }
+        toast({
+            title: "Submission Failed",
+            description: "Something went wrong. Please check your permissions and try again.",
+            variant: "destructive",
+        });
+    });
   };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-6 flex justify-center items-center">
+        <LoaderCircle className="animate-spin h-8 w-8" />
+      </div>
+    );
+  }
+
+  if (!user) {
+     return (
+      <div className="container mx-auto px-4 py-6">
+        <Card className="max-w-2xl mx-auto">
+          <CardHeader>
+            <CardTitle className="font-headline text-2xl">Contribute Data</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">You need to be signed in to contribute.</p>
+            <Button asChild>
+              <Link href="/profile">Sign In</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-6">

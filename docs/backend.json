@@ -107,11 +107,11 @@
           "description": "UID of the user who submitted."
         }
       },
-      "required": ["accessoryType", "compatibleModels", "status", "submittedAt"]
+      "required": ["accessoryType", "compatibleModels", "status", "submittedAt", "submittedBy"]
     }
   },
   "auth": {
-    "providers": ["anonymous"]
+    "providers": ["google.com"]
   },
   "firestore": {
     "/users/{userId}": {
