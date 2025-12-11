@@ -11,7 +11,7 @@ export default {
     extend: {
       fontFamily: {
         body: ['Inter', 'sans-serif'],
-        headline: ['Inter', 'sans-serif'],
+        headline: ['Poppins', 'sans-serif'],
         code: ['monospace'],
       },
       colors: {
@@ -88,10 +88,21 @@ export default {
             height: '0',
           },
         },
+        "slide-up-fade": {
+          "0%": { opacity: "0", transform: "translateY(10px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "shimmer": {
+          "100%": {
+            transform: "translateX(100%)",
+          },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        "slide-up-fade": "slide-up-fade 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+        "shimmer": "shimmer 2s infinite",
       },
     },
   },
