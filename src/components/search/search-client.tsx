@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -67,7 +67,7 @@ export function SearchClient({ categories }: SearchClientProps) {
 
   const searchTerm = form.watch("searchTerm");
 
-  const performSearch = async (searchTermValue: string) => {
+  const performSearch = useCallback(async (searchTermValue: string) => {
     if (searchTermValue.length < 2) {
       setResults(null);
       setAiSuggestions(null);
@@ -113,7 +113,7 @@ export function SearchClient({ categories }: SearchClientProps) {
     }
     
     setIsLoading(false);
-  };
+  }, [activeCategory, toast]);
 
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
@@ -133,7 +133,7 @@ export function SearchClient({ categories }: SearchClientProps) {
     return () => {
       clearTimeout(debouncedSearch);
     };
-  }, [searchTerm, activeCategory]);
+  }, [searchTerm, performSearch]);
 
   const onSubmit = (data: SearchFormValues) => {
     performSearch(data.searchTerm);
