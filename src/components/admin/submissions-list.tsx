@@ -8,6 +8,8 @@ import {
   updateDoc,
   runTransaction,
   serverTimestamp,
+  writeBatch,
+  addDoc,
 } from 'firebase/firestore';
 import { useCollection, useFirestore, useDoc } from '@/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,57 +58,70 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
 
   const { data: contributions, loading } = useCollection(contributionsQuery);
 
-  const handleApprove = async (id: string, contribution: any) => {
-    if (!firestore) return;
+  const handleApprove = async (contribution: any) => {
+    if (!firestore) {
+      toast({ title: 'Error', description: 'Firestore not available.', variant: 'destructive' });
+      return;
+    }
       
-      const accessoryCollectionRef = collection(firestore, 'accessories');
-      const userRef = doc(firestore, 'users', contribution.submittedBy);
-      const contributionRef = doc(firestore, 'contributions', id);
+    const userRef = doc(firestore, 'users', contribution.submittedBy);
+    const contributionRef = doc(firestore, 'contributions', contribution.id);
 
-      try {
-        await runTransaction(firestore, async (transaction) => {
-          const userDoc = await transaction.get(userRef);
-          if (!userDoc.exists()) {
-            throw "User document does not exist!";
-          }
+    try {
+      await runTransaction(firestore, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
 
-          // Exclude fields that shouldn't be in the new accessory document
-          const { id: contributionId, status, submittedAt, submittedBy, ...accessoryData } = contribution;
+        if (!userDoc.exists()) {
+          throw new Error(`User with ID ${contribution.submittedBy} not found.`);
+        }
+        
+        // 1. Create the new accessory object from the contribution data
+        const newAccessoryData = {
+          primaryModel: contribution.primaryModel,
+          accessoryType: contribution.accessoryType,
+          compatibleModels: contribution.compatibleModels,
+          brand: contribution.brand,
+          source: contribution.source || 'User Contribution',
+          lastUpdated: serverTimestamp(),
+          contributor: {
+            name: userDoc.data().displayName || 'Anonymous',
+            points: 10,
+          },
+        };
 
-          const newAccessoryRef = doc(accessoryCollectionRef);
-          transaction.set(newAccessoryRef, {
-            ...accessoryData,
-            lastUpdated: serverTimestamp(),
-            contributor: {
-              name: userDoc.data().displayName || 'Anonymous',
-              points: 10, // Award 10 points for an approved contribution
-            },
-          });
+        // We need a ref for the new document inside the transaction
+        const newAccessoryRef = doc(collection(firestore, "accessories"));
+        
+        // 2. Set the new accessory document
+        transaction.set(newAccessoryRef, newAccessoryData);
 
-          const newPoints = (userDoc.data().points || 0) + 10;
-          transaction.update(userRef, { points: newPoints });
-          
-          transaction.update(contributionRef, { status: 'approved' });
+        // 3. Update the user's points
+        const newPoints = (userDoc.data().points || 0) + 10;
+        transaction.update(userRef, { points: newPoints });
+        
+        // 4. Update the original contribution's status
+        transaction.update(contributionRef, { status: 'approved' });
+      });
+
+      toast({
+        title: 'Approved!',
+        description: 'The contribution has been approved and points awarded.',
+      });
+
+    } catch (e: any) {
+        console.error("Transaction failed: ", e);
+        const permissionError = new FirestorePermissionError({
+          path: `Transaction failed for contribution ${contribution.id}`,
+          operation: 'update',
+          requestResourceData: { error: e.message },
         });
-
+        errorEmitter.emit('permission-error', permissionError);
         toast({
-          title: 'Approved!',
-          description: 'The contribution has been added and user points awarded.',
+          title: 'Approval Failed',
+          description: e.message || 'Could not approve submission. Check permissions and data.',
+          variant: 'destructive',
         });
-
-      } catch (e) {
-          const permissionError = new FirestorePermissionError({
-            path: 'transaction',
-            operation: 'create',
-            requestResourceData: { contribution, error: (e as Error).message },
-          });
-          errorEmitter.emit('permission-error', permissionError);
-          toast({
-            title: 'Approval Failed',
-            description: 'Something went wrong during the approval process.',
-            variant: 'destructive',
-          });
-      }
+    }
   };
 
   const handleReject = async (id: string) => {
@@ -119,11 +134,15 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
           requestResourceData: { status: 'rejected' }
         });
         errorEmitter.emit('permission-error', permissionError);
+        toast({
+          title: 'Rejection failed',
+          description: 'Could not reject submission. Please check permissions.',
+          variant: 'destructive',
+        });
       });
       toast({
         title: 'Rejected',
         description: 'The contribution has been rejected.',
-        variant: 'destructive',
       });
   };
 
@@ -182,7 +201,7 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
                     >
                         <X className="mr-2 h-4 w-4" /> Reject
                     </Button>
-                    <Button size="sm" onClick={() => handleApprove(c.id, c)}>
+                    <Button size="sm" onClick={() => handleApprove(c)}>
                         <Check className="mr-2 h-4 w-4" /> Approve
                     </Button>
                 </div>
