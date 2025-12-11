@@ -137,9 +137,8 @@ export default function AdminLayout({
                 asChild
                 isActive={pathname === '/admin/users'}
                 tooltip={{ children: 'Users' }}
-                disabled
               >
-                <Link href="#">
+                <Link href="/admin/users">
                   <Users />
                   <span>Users</span>
                 </Link>
