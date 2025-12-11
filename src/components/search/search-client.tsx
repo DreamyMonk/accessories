@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -62,25 +62,32 @@ export function SearchClient({ categories }: SearchClientProps) {
     defaultValues: {
       searchTerm: "",
     },
+    mode: "onChange",
   });
 
-  const onSubmit = async (data: SearchFormValues) => {
+  const searchTerm = form.watch("searchTerm");
+
+  const performSearch = async (searchTermValue: string) => {
+    if (searchTermValue.length < 2) {
+      setResults(null);
+      setAiSuggestions(null);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     setResults(null);
     setAiSuggestions(null);
     
     // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Simulate finding results based on a simple keyword match
-    const exactMatchFound = data.searchTerm.toLowerCase().includes('note 10');
+    const exactMatchFound = searchTermValue.toLowerCase().includes('note 10');
 
     if (exactMatchFound) {
       setResults(mockResults);
     } else {
-      // No exact match, call AI fuzzy search
       try {
-        const aiResponse = await fuzzyAccessorySearch({ searchTerm: `${data.searchTerm} ${activeCategory}` });
+        const aiResponse = await fuzzyAccessorySearch({ searchTerm: `${searchTermValue} ${activeCategory}` });
         setAiSuggestions(aiResponse);
         if (aiResponse.suggestedMatches.length === 0 && aiResponse.alternativeSearchTerms.length === 0) {
             if (aiResponse.recommendFollowUp) {
@@ -106,6 +113,30 @@ export function SearchClient({ categories }: SearchClientProps) {
     }
     
     setIsLoading(false);
+  };
+
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'searchTerm') {
+        setIsLoading(true);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+
+
+  useEffect(() => {
+    const debouncedSearch = setTimeout(() => {
+      performSearch(searchTerm);
+    }, 500); // 500ms debounce delay
+
+    return () => {
+      clearTimeout(debouncedSearch);
+    };
+  }, [searchTerm, activeCategory]);
+
+  const onSubmit = (data: SearchFormValues) => {
+    performSearch(data.searchTerm);
   };
 
   return (
@@ -149,7 +180,7 @@ export function SearchClient({ categories }: SearchClientProps) {
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="w-full text-lg py-6" disabled={isLoading}>
+                <Button type="submit" className="w-full text-lg py-6" disabled={isLoading && !searchTerm}>
                   {isLoading ? (
                     <LoaderCircle className="animate-spin" />
                   ) : (
@@ -159,7 +190,7 @@ export function SearchClient({ categories }: SearchClientProps) {
                   )}
                 </Button>
                 <FormDescription className="text-center">
-                  Enter a brand, model, and/or accessory. Exact match is prioritized.
+                  Enter a brand, model, and/or accessory. Results will appear as you type.
                 </FormDescription>
               </form>
             </Form>
@@ -168,14 +199,14 @@ export function SearchClient({ categories }: SearchClientProps) {
       </section>
 
       <section className="min-h-[200px]">
-        {isLoading && (
+        {isLoading && searchTerm.length >= 2 && (
           <div className="space-y-4">
             <Skeleton className="h-48 w-full rounded-lg" />
             <Skeleton className="h-48 w-full rounded-lg" />
           </div>
         )}
 
-        {results && (
+        {!isLoading && results && (
           <div className="space-y-4">
             <h2 className="font-headline text-2xl font-bold">Exact Match Found</h2>
             {results.map((result, i) => (
@@ -184,7 +215,7 @@ export function SearchClient({ categories }: SearchClientProps) {
           </div>
         )}
 
-        {aiSuggestions && (aiSuggestions.suggestedMatches.length > 0 || aiSuggestions.alternativeSearchTerms.length > 0) && (
+        {!isLoading && aiSuggestions && (aiSuggestions.suggestedMatches.length > 0 || aiSuggestions.alternativeSearchTerms.length > 0) && (
           <div className="space-y-4">
             <h2 className="font-headline text-2xl font-bold">No Exact Match Found</h2>
             <p className="text-muted-foreground">We couldn't find an exact match. Here are some AI-powered suggestions:</p>
@@ -207,8 +238,7 @@ export function SearchClient({ categories }: SearchClientProps) {
                         <div className="flex flex-wrap gap-2">
                             {aiSuggestions.alternativeSearchTerms.map(term => (
                                 <Button key={term} variant="outline" size="sm" onClick={() => {
-                                    form.setValue('searchTerm', term);
-                                    form.handleSubmit(onSubmit)();
+                                    form.setValue('searchTerm', term, { shouldValidate: true });
                                 }}>{term}</Button>
                             ))}
                         </div>
