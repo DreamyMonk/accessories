@@ -13,7 +13,7 @@ import {
   SidebarFooter,
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/logo';
-import { Home, LoaderCircle, LogOut, Shield, Users } from 'lucide-react';
+import { Home, LoaderCircle, LogOut, Shield, Users, FileCheck } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -117,6 +117,18 @@ export default function AdminLayout({
                 <Link href="/admin">
                   <Home />
                   <span>Dashboard</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+               <SidebarMenuButton
+                asChild
+                isActive={pathname.startsWith('/admin/submissions')}
+                tooltip={{ children: 'Submissions' }}
+              >
+                <Link href="/admin/submissions">
+                  <FileCheck />
+                  <span>Submissions</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
