@@ -73,7 +73,6 @@ export function SearchClient({ categories }: { categories: string[] }) {
     async (currentSearchTerm: string, accessoriesData: Accessory[] | null) => {
       if (!accessoriesData) {
         setResults(null);
-        setAiSuggestions(null);
         setIsLoading(false);
         return;
       }
@@ -95,48 +94,24 @@ export function SearchClient({ categories }: { categories: string[] }) {
       const filteredResults = accessoriesData.filter(
         (acc) =>
           acc.primaryModel.toLowerCase().includes(searchLower) ||
-          acc.brand.toLowerCase().includes(searchLower) ||
+          (acc.brand && acc.brand.toLowerCase().includes(searchLower)) ||
           acc.compatibleModels.some(m => m.toLowerCase().includes(searchLower))
       );
-
-      if (filteredResults.length > 0) {
-        setResults(filteredResults);
-      } else {
-         try {
-          const aiResponse = await fuzzyAccessorySearch({ searchTerm: `${currentSearchTerm} ${activeCategory}` });
-          setAiSuggestions(aiResponse);
-        } catch (error) {
-          console.error("AI search failed:", error);
-          toast({
-            title: "Search Error",
-            description: "AI suggestions failed to load.",
-            variant: "destructive",
-          });
-        }
-      }
+      
+      setResults(filteredResults);
       setIsLoading(false);
     },
-    [activeCategory, toast]
+    [activeCategory]
   );
   
   useEffect(() => {
     setIsLoading(accessoriesLoading);
     if (!accessoriesLoading && accessories) {
-      performSearch(searchTerm, accessories);
+      // Set initial results when data loads
+      setResults(accessories);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accessories, accessoriesLoading, activeCategory]);
+  }, [accessories, accessoriesLoading]);
 
-
-  useEffect(() => {
-    const debouncedSearch = setTimeout(() => {
-      performSearch(searchTerm, accessories);
-    }, 500); // 500ms debounce delay
-
-    return () => {
-      clearTimeout(debouncedSearch);
-    };
-  }, [searchTerm, accessories, performSearch]);
 
   const onSubmit = (data: SearchFormValues) => {
     performSearch(data.searchTerm, accessories);
@@ -145,7 +120,7 @@ export function SearchClient({ categories }: { categories: string[] }) {
   const handleCategoryChange = (category: string) => {
     setActiveCategory(category);
     form.setValue('searchTerm', '');
-    setResults(null);
+    setResults(accessories ? accessories.filter(a => a.accessoryType === category) : null);
     setAiSuggestions(null);
   }
 
@@ -221,7 +196,7 @@ export function SearchClient({ categories }: { categories: string[] }) {
                   )}
                 </Button>
                 <FormDescription className="text-center">
-                  Enter a brand or model. Results will appear as you type.
+                  Enter a brand or model and click search.
                 </FormDescription>
               </form>
             </Form>
@@ -250,69 +225,13 @@ export function SearchClient({ categories }: { categories: string[] }) {
           </div>
         )}
 
-        {!isLoading && results && results.length === 0 && !aiSuggestions && (
+        {!isLoading && (!results || results.length === 0) && (
           <Card>
             <CardContent className="p-6 text-center">
-              <p className="text-muted-foreground">No accessories found for "{activeCategory}". Try another category or a broader search.</p>
+              <p className="text-muted-foreground">No accessories found for your search. Try another category or a broader search term.</p>
             </CardContent>
           </Card>
         )}
-
-        {!isLoading &&
-          aiSuggestions &&
-          (aiSuggestions.suggestedMatches.length > 0 ||
-            aiSuggestions.alternativeSearchTerms.length > 0) && (
-            <div className="space-y-4">
-              <h2 className="font-headline text-2xl font-bold">
-                No Exact Match Found
-              </h2>
-              <p className="text-muted-foreground">
-                We couldn't find an exact match. Here are some AI-powered
-                suggestions:
-              </p>
-
-              {aiSuggestions.suggestedMatches.length > 0 && (
-                <Card>
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold mb-2">Suggested Matches</h3>
-                    <ul className="list-disc list-inside space-y-1">
-                      {aiSuggestions.suggestedMatches.map((item) => (
-                        <li key={item} className="text-muted-foreground">
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              )}
-
-              {aiSuggestions.alternativeSearchTerms.length > 0 && (
-                <Card>
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold mb-2">
-                      Alternative Search Terms
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {aiSuggestions.alternativeSearchTerms.map((term) => (
-                        <Button
-                          key={term}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            form.setValue('searchTerm', term, {
-                              shouldValidate: true,
-                            });
-                          }}
-                        >
-                          {term}
-                        </Button>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          )}
       </section>
     </div>
   );
