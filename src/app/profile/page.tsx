@@ -14,7 +14,7 @@ import { signOut } from 'firebase/auth';
 import { LoaderCircle, LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { doc, setDoc } from 'firebase/firestore';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useDoc } from '@/firebase';
 import Link from 'next/link';
 
@@ -23,8 +23,11 @@ export default function ProfilePage() {
   const firestore = useFirestore();
   const { user, loading: userLoading } = useUser();
 
-  // Note: user.uid is now stable across all auth providers
-  const userRef = user ? doc(firestore, 'users', user.uid) : null;
+  const userRef = useMemo(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+  
   const { data: userData, loading: userDataLoading } = useDoc(userRef);
 
   useEffect(() => {

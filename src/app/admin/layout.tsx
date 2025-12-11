@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { useUser, useDoc, useFirestore, useAuth } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
+import { useMemo } from 'react';
 
 export default function AdminLayout({
   children,
@@ -33,7 +34,10 @@ export default function AdminLayout({
   const firestore = useFirestore();
   const auth = useAuth();
   
-  const userRef = user ? doc(firestore, 'users', user.uid) : null;
+  const userRef = useMemo(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
   const { data: userData, loading: userDataLoading } = useDoc(userRef);
 
   const isLoading = userLoading || userDataLoading;
