@@ -16,13 +16,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ResultCard } from "@/components/search/result-card";
@@ -31,13 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { fuzzyAccessorySearch, FuzzyAccessorySearchOutput } from '@/ai/flows/fuzzy-accessory-search';
 import { Card, CardContent } from '../ui/card';
 
-interface Brand {
-  id: string;
-  name: string;
-}
-
 interface SearchClientProps {
-  brands: Brand[];
   categories: string[];
 }
 
@@ -58,13 +45,12 @@ const mockResults = [
 ];
 
 const searchSchema = z.object({
-  brand: z.string().min(1, "Please select a brand."),
-  model: z.string().min(2, "Model name must be at least 2 characters."),
+  searchTerm: z.string().min(2, "Search term must be at least 2 characters."),
 });
 
 type SearchFormValues = z.infer<typeof searchSchema>;
 
-export function SearchClient({ brands, categories }: SearchClientProps) {
+export function SearchClient({ categories }: SearchClientProps) {
   const [activeCategory, setActiveCategory] = useState(categories[0]);
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<any[] | null>(null);
@@ -74,8 +60,7 @@ export function SearchClient({ brands, categories }: SearchClientProps) {
   const form = useForm<SearchFormValues>({
     resolver: zodResolver(searchSchema),
     defaultValues: {
-      brand: "",
-      model: "",
+      searchTerm: "",
     },
   });
 
@@ -88,14 +73,14 @@ export function SearchClient({ brands, categories }: SearchClientProps) {
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     // Simulate finding results based on a simple keyword match
-    const exactMatchFound = data.model.toLowerCase().includes('note 10');
+    const exactMatchFound = data.searchTerm.toLowerCase().includes('note 10');
 
     if (exactMatchFound) {
       setResults(mockResults);
     } else {
       // No exact match, call AI fuzzy search
       try {
-        const aiResponse = await fuzzyAccessorySearch({ searchTerm: `${data.brand} ${data.model} ${activeCategory}` });
+        const aiResponse = await fuzzyAccessorySearch({ searchTerm: `${data.searchTerm} ${activeCategory}` });
         setAiSuggestions(aiResponse);
         if (aiResponse.suggestedMatches.length === 0 && aiResponse.alternativeSearchTerms.length === 0) {
             if (aiResponse.recommendFollowUp) {
@@ -106,7 +91,7 @@ export function SearchClient({ brands, categories }: SearchClientProps) {
             } else {
                  toast({
                     title: "No results",
-                    description: "We couldn't find any matches. Try a different model.",
+                    description: "We couldn't find any matches. Try a different search.",
                 });
             }
         }
@@ -151,45 +136,19 @@ export function SearchClient({ brands, categories }: SearchClientProps) {
           <CardContent className="p-4 md:p-6">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-                  <FormField
-                    control={form.control}
-                    name="brand"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Brand</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a brand" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {brands.map((brand) => (
-                              <SelectItem key={brand.id} value={brand.name}>
-                                {brand.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="model"
-                    render={({ field }) => (
-                      <FormItem className="md:col-span-2">
-                        <FormLabel>Model</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g. Note 10 Pro Max" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                <FormField
+                  control={form.control}
+                  name="searchTerm"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Search by Brand, Model, etc.</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. Samsung Galaxy S23 Ultra Case" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <Button type="submit" className="w-full text-lg py-6" disabled={isLoading}>
                   {isLoading ? (
                     <LoaderCircle className="animate-spin" />
@@ -200,7 +159,7 @@ export function SearchClient({ brands, categories }: SearchClientProps) {
                   )}
                 </Button>
                 <FormDescription className="text-center">
-                  Type full model name for best results. Exact match is prioritized.
+                  Enter a brand, model, and/or accessory. Exact match is prioritized.
                 </FormDescription>
               </form>
             </Form>
@@ -248,7 +207,7 @@ export function SearchClient({ brands, categories }: SearchClientProps) {
                         <div className="flex flex-wrap gap-2">
                             {aiSuggestions.alternativeSearchTerms.map(term => (
                                 <Button key={term} variant="outline" size="sm" onClick={() => {
-                                    form.setValue('model', term);
+                                    form.setValue('searchTerm', term);
                                     form.handleSubmit(onSubmit)();
                                 }}>{term}</Button>
                             ))}

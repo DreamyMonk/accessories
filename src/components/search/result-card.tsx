@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Check, Copy, QrCode, Share2, ShieldAlert } from "lucide-react";
+import { Check, Copy, Share2, ShieldAlert } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -74,10 +74,9 @@ export function ResultCard({ result, index }: { result: any, index: number }) {
                 Contributed by: <span className="font-semibold text-foreground">{result.contributor.name}</span> (+{result.contributor.points} pts)
              </div>
         )}
-        <div className="w-full grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="w-full grid grid-cols-2 sm:grid-cols-3 gap-2">
             <Button variant="outline" onClick={handleCopy}><Copy className="mr-2 h-4 w-4" /> Copy</Button>
             <Button variant="outline"><Share2 className="mr-2 h-4 w-4" /> Share</Button>
-            <Button variant="outline"><QrCode className="mr-2 h-4 w-4" /> QR</Button>
             <Button variant="outline" className="text-destructive hover:bg-destructive/10 hover:text-destructive"><ShieldAlert className="mr-2 h-4 w-4"/> Report</Button>
         </div>
       </CardFooter>

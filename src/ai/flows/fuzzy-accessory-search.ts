@@ -12,7 +12,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const FuzzyAccessorySearchInputSchema = z.object({
-  searchTerm: z.string().describe('The search term entered by the user.'),
+  searchTerm: z.string().describe('The search term entered by the user, which may include a brand, model, and accessory type.'),
 });
 export type FuzzyAccessorySearchInput = z.infer<typeof FuzzyAccessorySearchInputSchema>;
 
@@ -39,7 +39,9 @@ const fuzzyAccessorySearchPrompt = ai.definePrompt({
 
   The user has searched for: "{{searchTerm}}".  No exact matches were found.
 
-  Suggest potential accessory matches that are similar to the search term, and alternative search terms that the user could try.  If no results are found, set recommendFollowUp to true to suggest the user ask follow up questions.
+  Based on the user's search term, suggest potential accessory matches that are similar, and alternative search terms that might yield better results. For example, if the user searched for a phone model and an accessory, you could suggest different variations of the model name or related accessories.
+
+  If you cannot find any relevant suggestions, set recommendFollowUp to true.
 
   Return the results in the following JSON format:
   {
