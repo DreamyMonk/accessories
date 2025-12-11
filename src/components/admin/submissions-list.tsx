@@ -70,7 +70,8 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
             throw "User document does not exist!";
           }
 
-          const { status, submittedAt, submittedBy, ...accessoryData } = contribution;
+          // Exclude fields that shouldn't be in the new accessory document
+          const { id: contributionId, status, submittedAt, submittedBy, ...accessoryData } = contribution;
 
           const newAccessoryRef = doc(accessoryCollectionRef);
           transaction.set(newAccessoryRef, {
@@ -78,7 +79,7 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
             lastUpdated: serverTimestamp(),
             contributor: {
               name: userDoc.data().displayName || 'Anonymous',
-              points: 10,
+              points: 10, // Award 10 points for an approved contribution
             },
           });
 
