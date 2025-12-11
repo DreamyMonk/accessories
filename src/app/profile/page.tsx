@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { signOut } from 'firebase/auth';
-import { LoaderCircle, LogOut, PlusCircle } from 'lucide-react';
+import { LoaderCircle, LogOut, PlusCircle, FileText } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { doc, setDoc } from 'firebase/firestore';
 import { useMemo, useEffect } from 'react';
@@ -91,6 +91,9 @@ export default function ProfilePage() {
             <CardFooter className="flex flex-col gap-2">
               <Button asChild className="w-full">
                   <Link href="/contribute"><PlusCircle className="mr-2 h-4 w-4" /> Contribute Data</Link>
+              </Button>
+               <Button asChild variant="secondary" className="w-full">
+                  <Link href="/my-contributions"><FileText className="mr-2 h-4 w-4" /> My Contributions</Link>
               </Button>
               <Button variant="outline" className="w-full" onClick={handleSignOut}>
                 <LogOut className="mr-2 h-4 w-4" /> Sign Out
