@@ -149,7 +149,7 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
           <CardHeader>
             <div className="flex justify-between items-start">
               <div>
-                <CardTitle>{c.accessoryType}</CardTitle>
+                <CardTitle>{c.primaryModel} ({c.accessoryType})</CardTitle>
                 <CardDescription>
                   <a href={c.source} target="_blank" rel="noopener noreferrer" className="hover:underline text-primary">
                     Source

@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { addDoc, collection, serverTimestamp, query } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp, query, orderBy } from "firebase/firestore";
 import { useFirestore, useUser, useCollection } from "@/firebase";
 import Link from "next/link";
 import { LoaderCircle } from "lucide-react";
@@ -18,8 +18,11 @@ import { FirestorePermissionError } from "@/firebase/errors";
 import { AppLayout } from "@/components/layout/app-layout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 
 const contributionSchema = z.object({
+  primaryModel: z.string().min(3, "Please enter a primary model name."),
+  brand: z.string().min(2, "Please enter a brand name."),
   accessoryType: z.string().min(1, "Please select an accessory type."),
   compatibleModels: z.string().min(3, "Please list at least one model."),
   source: z.string().url().optional().or(z.literal('')),
@@ -31,10 +34,11 @@ export default function ContributePage() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user, loading: userLoading } = useUser();
+  const router = useRouter();
 
   const categoriesQuery = useMemo(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'categories'));
+    return query(collection(firestore, 'categories'), orderBy('name', 'asc'));
   }, [firestore]);
 
   const { data: categories, loading: categoriesLoading } = useCollection(categoriesQuery);
@@ -42,6 +46,8 @@ export default function ContributePage() {
   const form = useForm<ContributionFormValues>({
     resolver: zodResolver(contributionSchema),
     defaultValues: {
+      primaryModel: "",
+      brand: "",
       accessoryType: "",
       compatibleModels: "",
       source: "",
@@ -74,6 +80,7 @@ export default function ContributePage() {
           description: "Thank you for your contribution. It will be reviewed shortly.",
         });
         form.reset();
+        router.push('/my-contributions');
     }).catch(error => {
         const permissionError = new FirestorePermissionError({
             path: contributionsCollectionRef.path,
@@ -129,6 +136,34 @@ export default function ContributePage() {
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                    control={form.control}
+                    name="primaryModel"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Primary Model</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g., iPhone 15 Pro" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="brand"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Brand</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g., Apple" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                </div>
                 <FormField
                   control={form.control}
                   name="accessoryType"

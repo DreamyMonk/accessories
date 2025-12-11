@@ -81,6 +81,12 @@
       "description": "A user-submitted data contribution for review.",
       "type": "object",
       "properties": {
+        "primaryModel": {
+          "type": "string"
+        },
+        "brand": {
+          "type": "string"
+        },
         "accessoryType": {
           "type": "string"
         },
@@ -107,7 +113,15 @@
           "description": "UID of the user who submitted."
         }
       },
-      "required": ["accessoryType", "compatibleModels", "status", "submittedAt", "submittedBy"]
+      "required": [
+        "primaryModel",
+        "brand",
+        "accessoryType",
+        "compatibleModels",
+        "status",
+        "submittedAt",
+        "submittedBy"
+      ]
     },
     "category": {
       "title": "Category",
