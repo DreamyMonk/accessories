@@ -44,7 +44,7 @@ export function Header() {
                 </Button>
               </>
             ))}
-            <Link href="/leaderboard" passHref>
+            <Link href="/leaderboard">
                 <Button variant="ghost" size="icon" aria-label="Leaderboard">
                     <Trophy className="h-5 w-5" />
                 </Button>
