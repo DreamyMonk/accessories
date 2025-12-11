@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -20,14 +19,9 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { ResultCard } from '@/components/search/result-card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
-import {
-  fuzzyAccessorySearch,
-  FuzzyAccessorySearchOutput,
-} from '@/ai/flows/fuzzy-accessory-search';
 import { Card, CardContent } from '../ui/card';
 import { useCollection, useFirestore } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 import type { Accessory } from '@/lib/types';
 import { format } from 'date-fns';
 
@@ -37,15 +31,11 @@ const searchSchema = z.object({
 
 type SearchFormValues = z.infer<typeof searchSchema>;
 
-export function SearchClient({ categories }: { categories: string[] }) {
-  const [activeCategory, setActiveCategory] = useState(categories[0]);
+export function SearchClient() {
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<Accessory[] | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
-  const [aiSuggestions, setAiSuggestions] = useState<FuzzyAccessorySearchOutput | null>(
-    null
-  );
-  const { toast } = useToast();
   const firestore = useFirestore();
 
   const form = useForm<SearchFormValues>({
@@ -56,11 +46,21 @@ export function SearchClient({ categories }: { categories: string[] }) {
     mode: 'onChange',
   });
 
-  const searchTerm = form.watch('searchTerm');
-
-  // Firebase query for accessories
-  const accessoriesQuery = useMemo(() => {
+  const categoriesQuery = useMemo(() => {
     if (!firestore) return null;
+    return query(collection(firestore, 'categories'), orderBy('name', 'asc'));
+  }, [firestore]);
+
+  const { data: categories, loading: categoriesLoading } = useCollection(categoriesQuery);
+
+  useEffect(() => {
+    if (categories && categories.length > 0 && !activeCategory) {
+      setActiveCategory(categories[0].name);
+    }
+  }, [categories, activeCategory]);
+
+  const accessoriesQuery = useMemo(() => {
+    if (!firestore || !activeCategory) return null;
     return query(
       collection(firestore, 'accessories'),
       where('accessoryType', '==', activeCategory)
@@ -69,11 +69,11 @@ export function SearchClient({ categories }: { categories: string[] }) {
 
   const { data: accessories, loading: accessoriesLoading } =
     useCollection(accessoriesQuery);
-    
+
   useEffect(() => {
-      if(!accessoriesLoading){
-          setIsLoading(false)
-      }
+    if(!accessoriesLoading){
+        setIsLoading(false)
+    }
   },[accessoriesLoading])
 
   const performSearch = useCallback(
@@ -87,9 +87,7 @@ export function SearchClient({ categories }: { categories: string[] }) {
       setIsLoading(true);
       setHasSearched(true);
       setResults(null);
-      setAiSuggestions(null);
 
-      // Simulate API call for local filtering feel
       await new Promise(resolve => setTimeout(resolve, 300));
 
       if (currentSearchTerm.length < 2) {
@@ -122,9 +120,8 @@ export function SearchClient({ categories }: { categories: string[] }) {
   const handleCategoryChange = (category: string) => {
     setActiveCategory(category);
     form.setValue('searchTerm', '');
-    setResults(null); // Clear results when category changes
-    setHasSearched(false); // Reset search status
-    setAiSuggestions(null);
+    setResults(null);
+    setHasSearched(false);
   }
 
   const formatTimestamp = (timestamp: any) => {
@@ -147,21 +144,29 @@ export function SearchClient({ categories }: { categories: string[] }) {
           </p>
         </div>
 
+        {categoriesLoading ? (
+            <div className="flex justify-center w-full space-x-2 pb-4">
+                <Skeleton className="h-10 w-24 rounded-full" />
+                <Skeleton className="h-10 w-32 rounded-full" />
+                <Skeleton className="h-10 w-28 rounded-full" />
+            </div>
+        ) : (
         <ScrollArea className="w-full whitespace-nowrap rounded-md">
           <div className="flex justify-center w-full space-x-2 pb-4">
-            {categories.map((category) => (
+            {categories?.map((category) => (
               <Button
-                key={category}
-                variant={activeCategory === category ? 'default' : 'outline'}
+                key={category.id}
+                variant={activeCategory === category.name ? 'default' : 'outline'}
                 className="rounded-full transition-all duration-200"
-                onClick={() => handleCategoryChange(category)}
+                onClick={() => handleCategoryChange(category.name)}
               >
-                {category}
+                {category.name}
               </Button>
             ))}
           </div>
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
+        )}
 
         <Card
           className="mt-4 shadow-lg"
@@ -183,13 +188,14 @@ export function SearchClient({ categories }: { categories: string[] }) {
                         <Input
                           placeholder="e.g. Samsung Galaxy S23 Ultra"
                           {...field}
+                          disabled={!activeCategory}
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                 <Button type="submit" className="w-full text-lg py-6" disabled={isLoading}>
+                 <Button type="submit" className="w-full text-lg py-6" disabled={isLoading || !activeCategory}>
                   {isLoading ? (
                     <LoaderCircle className="animate-spin" />
                   ) : (
@@ -198,9 +204,9 @@ export function SearchClient({ categories }: { categories: string[] }) {
                     </>
                   )}
                 </Button>
-                <FormDescription className="text-center">
+                 <p className="text-sm text-center text-muted-foreground">
                   Enter a brand or model and click search.
-                </FormDescription>
+                </p>
               </form>
             </Form>
           </CardContent>
@@ -208,14 +214,14 @@ export function SearchClient({ categories }: { categories: string[] }) {
       </section>
 
       <section className="min-h-[200px]">
-        {isLoading && hasSearched && (
+        {(isLoading || accessoriesLoading) && hasSearched && (
           <div className="space-y-4">
             <Skeleton className="h-48 w-full rounded-lg" />
             <Skeleton className="h-48 w-full rounded-lg" />
           </div>
         )}
         
-        {!isLoading && results && results.length > 0 && hasSearched && (
+        {!isLoading && !accessoriesLoading && results && results.length > 0 && hasSearched && (
            <div className="space-y-4">
             <h2 className="font-headline text-2xl font-bold">{results.length} Match(es) Found</h2>
             {results.map((result, i) => (
@@ -228,7 +234,7 @@ export function SearchClient({ categories }: { categories: string[] }) {
           </div>
         )}
 
-        {!isLoading && hasSearched && (!results || results.length === 0) && (
+        {!isLoading && !accessoriesLoading && hasSearched && (!results || results.length === 0) && (
           <Card>
             <CardContent className="p-6 text-center">
               <p className="text-muted-foreground">No accessories found for your search. Try another category or a broader search term.</p>

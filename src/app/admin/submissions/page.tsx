@@ -7,16 +7,15 @@ import Link from "next/link";
 import { ManualAddForm } from "@/components/admin/manual-add-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SubmissionsList } from "@/components/admin/submissions-list";
+import { CategoryManager } from "@/components/admin/category-manager";
 
 export default function SubmissionsPage() {
-  const categories = ['Tempered Glass', 'Cases & Covers', 'Batteries', 'Chargers', 'Cables'];
-  
   return (
     <div className="space-y-8">
        <div>
-        <h1 className="text-3xl font-headline font-bold">Submissions</h1>
+        <h1 className="text-3xl font-headline font-bold">Submissions & Data</h1>
         <p className="text-muted-foreground">
-          Review and approve new data contributions from the community.
+          Review submissions and manage application data like accessories and categories.
         </p>
       </div>
 
@@ -37,18 +36,22 @@ export default function SubmissionsPage() {
         </TabsContent>
       </Tabs>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <CategoryManager />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Add Accessory Manually</CardTitle>
-          <CardDescription>
-            Add a single accessory directly to the database.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ManualAddForm categories={categories} />
-        </CardContent>
-      </Card>
+        <Card>
+            <CardHeader>
+            <CardTitle>Add Accessory Manually</CardTitle>
+            <CardDescription>
+                Add a single accessory directly to the database.
+            </CardDescription>
+            </CardHeader>
+            <CardContent>
+            <ManualAddForm />
+            </CardContent>
+        </Card>
+      </div>
+
 
       <Card>
         <CardHeader>

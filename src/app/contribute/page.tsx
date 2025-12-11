@@ -5,20 +5,22 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { useFirestore, useUser } from "@/firebase";
+import { addDoc, collection, serverTimestamp, query } from "firebase/firestore";
+import { useFirestore, useUser, useCollection } from "@/firebase";
 import Link from "next/link";
 import { LoaderCircle } from "lucide-react";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { AppLayout } from "@/components/layout/app-layout";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useMemo } from "react";
 
 const contributionSchema = z.object({
-  accessoryType: z.string().min(3, "Accessory type must be at least 3 characters."),
+  accessoryType: z.string().min(1, "Please select an accessory type."),
   compatibleModels: z.string().min(3, "Please list at least one model."),
   source: z.string().url().optional().or(z.literal('')),
 });
@@ -28,7 +30,14 @@ type ContributionFormValues = z.infer<typeof contributionSchema>;
 export default function ContributePage() {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { user, loading } = useUser();
+  const { user, loading: userLoading } = useUser();
+
+  const categoriesQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'categories'));
+  }, [firestore]);
+
+  const { data: categories, loading: categoriesLoading } = useCollection(categoriesQuery);
 
   const form = useForm<ContributionFormValues>({
     resolver: zodResolver(contributionSchema),
@@ -82,7 +91,7 @@ export default function ContributePage() {
   };
 
   const renderContent = () => {
-    if (loading) {
+    if (userLoading || categoriesLoading) {
       return (
         <div className="container mx-auto px-4 py-6 flex justify-center items-center">
           <LoaderCircle className="animate-spin h-8 w-8" />
@@ -126,9 +135,20 @@ export default function ContributePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Accessory Type</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Tempered Glass, Back Cover" {...field} />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select an accessory category" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {categories?.map((category) => (
+                            <SelectItem key={category.id} value={category.name}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -164,9 +184,9 @@ Oppo A74"
                       <FormControl>
                         <Input placeholder="e.g., link to a product page or your own testing" {...field} />
                       </FormControl>
-                       <FormDescription>
+                       <p className="text-sm text-muted-foreground">
                         Please provide a link to the product page if available.
-                      </FormDescription>
+                      </p>
                       <FormMessage />
                     </FormItem>
                   )}

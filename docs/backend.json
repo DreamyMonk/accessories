@@ -108,6 +108,21 @@
         }
       },
       "required": ["accessoryType", "compatibleModels", "status", "submittedAt", "submittedBy"]
+    },
+    "category": {
+      "title": "Category",
+      "description": "Represents an accessory category.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["name"]
     }
   },
   "auth": {
@@ -131,6 +146,12 @@
         "$ref": "#/entities/contribution"
       },
       "description": "Stores user-submitted data pending review."
+    },
+    "/categories/{categoryId}": {
+      "schema": {
+        "$ref": "#/entities/category"
+      },
+      "description": "Stores available accessory categories."
     }
   }
 }

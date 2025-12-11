@@ -15,8 +15,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { addDoc, collection, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { useFirestore, useCollection } from '@/firebase';
 import {
   Select,
   SelectContent,
@@ -26,10 +26,12 @@ import {
 } from '@/components/ui/select';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { useMemo } from 'react';
+import { Skeleton } from '../ui/skeleton';
 
 const accessorySchema = z.object({
   primaryModel: z.string().min(3, 'Primary model must be at least 3 characters.'),
-  accessoryType: z.string().min(3, 'Please select an accessory type.'),
+  accessoryType: z.string().min(1, 'Please select an accessory type.'),
   compatibleModels: z.string().min(3, 'Please list at least one model.'),
   brand: z.string().min(2, 'Brand must be at least 2 characters.'),
   source: z.string().url().optional().or(z.literal('')),
@@ -37,13 +39,17 @@ const accessorySchema = z.object({
 
 type AccessoryFormValues = z.infer<typeof accessorySchema>;
 
-interface ManualAddFormProps {
-  categories: string[];
-}
-
-export function ManualAddForm({ categories }: ManualAddFormProps) {
+export function ManualAddForm() {
   const { toast } = useToast();
   const firestore = useFirestore();
+
+  const categoriesQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'categories'), orderBy('name', 'asc'));
+  }, [firestore]);
+
+  const { data: categories, loading: categoriesLoading } = useCollection(categoriesQuery);
+
 
   const form = useForm<AccessoryFormValues>({
     resolver: zodResolver(accessorySchema),
@@ -134,20 +140,22 @@ export function ManualAddForm({ categories }: ManualAddFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Accessory Type</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an accessory type" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {categoriesLoading ? <Skeleton className="h-10 w-full" /> : (
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an accessory type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {categories?.map((category) => (
+                      <SelectItem key={category.id} value={category.name}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <FormMessage />
             </FormItem>
           )}
