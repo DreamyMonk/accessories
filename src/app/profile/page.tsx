@@ -17,6 +17,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import { useMemo, useEffect } from 'react';
 import { useDoc } from '@/firebase';
 import Link from 'next/link';
+import { AppLayout } from '@/components/layout/app-layout';
 
 export default function ProfilePage() {
   const auth = useAuth();
@@ -58,61 +59,69 @@ export default function ProfilePage() {
   
   const isLoading = userLoading || userDataLoading;
 
-  if (isLoading) {
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="container mx-auto flex h-screen items-center justify-center">
+          <LoaderCircle className="h-12 w-12 animate-spin" />
+        </div>
+      );
+    }
+  
     return (
-      <div className="container mx-auto flex h-screen items-center justify-center">
-        <LoaderCircle className="h-12 w-12 animate-spin" />
+      <div className="container mx-auto px-4 py-6">
+        {user && userData ? (
+          <Card className="mx-auto max-w-md">
+            <CardHeader className="items-center text-center">
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={userData.photoURL || undefined} alt={userData.displayName} />
+                <AvatarFallback>
+                  {userData.displayName?.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <CardTitle className="pt-4 font-headline text-2xl">
+                {userData.displayName}
+              </CardTitle>
+              <CardDescription>{userData.email}</CardDescription>
+            </CardHeader>
+            <CardContent className="text-center">
+               <p className="text-sm text-muted-foreground">Your points</p>
+               <p className="text-4xl font-bold text-primary">{userData.points || 0}</p>
+            </CardContent>
+            <CardFooter className="flex flex-col gap-2">
+              <Button asChild className="w-full">
+                  <Link href="/contribute"><PlusCircle className="mr-2 h-4 w-4" /> Contribute Data</Link>
+              </Button>
+              <Button variant="outline" className="w-full" onClick={handleSignOut}>
+                <LogOut className="mr-2 h-4 w-4" /> Sign Out
+              </Button>
+            </CardFooter>
+          </Card>
+        ) : (
+          <Card className="mx-auto max-w-md">
+            <CardHeader>
+              <CardTitle className="font-headline">You are not signed in</CardTitle>
+              <CardDescription>
+                Sign in to view your profile, contribute data, and climb the leaderboard.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+               <Button asChild>
+                  <Link href="/login">Sign In</Link>
+              </Button>
+              <Button asChild variant="outline">
+                  <Link href="/register">Create an Account</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      {user && userData ? (
-        <Card className="mx-auto max-w-md">
-          <CardHeader className="items-center text-center">
-            <Avatar className="h-24 w-24">
-              <AvatarImage src={userData.photoURL || undefined} alt={userData.displayName} />
-              <AvatarFallback>
-                {userData.displayName?.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <CardTitle className="pt-4 font-headline text-2xl">
-              {userData.displayName}
-            </CardTitle>
-            <CardDescription>{userData.email}</CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-             <p className="text-sm text-muted-foreground">Your points</p>
-             <p className="text-4xl font-bold text-primary">{userData.points || 0}</p>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-2">
-            <Button asChild className="w-full">
-                <Link href="/contribute"><PlusCircle className="mr-2 h-4 w-4" /> Contribute Data</Link>
-            </Button>
-            <Button variant="outline" className="w-full" onClick={handleSignOut}>
-              <LogOut className="mr-2 h-4 w-4" /> Sign Out
-            </Button>
-          </CardFooter>
-        </Card>
-      ) : (
-        <Card className="mx-auto max-w-md">
-          <CardHeader>
-            <CardTitle className="font-headline">You are not signed in</CardTitle>
-            <CardDescription>
-              Sign in to view your profile, contribute data, and climb the leaderboard.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-             <Button asChild>
-                <Link href="/login">Sign In</Link>
-            </Button>
-            <Button asChild variant="outline">
-                <Link href="/register">Create an Account</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+    <AppLayout>
+      {renderContent()}
+    </AppLayout>
+  )
 }

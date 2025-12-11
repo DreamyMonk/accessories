@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
+import { AppLayout } from "@/components/layout/app-layout";
 
 const mockLeaderboard = [
   { rank: 1, name: "Rahul Sharma", points: 1256, avatar: "https://picsum.photos/seed/1/150/150", imageHint: 'person portrait' },
@@ -49,57 +50,59 @@ export default function LeaderboardPage() {
   const orderedTopThree = getOrderedTopThree();
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="text-center mb-8">
-        <h1 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">Top Contributors</h1>
-        <p className="text-muted-foreground mt-2">Thanks to our community for making AccessoryAce better!</p>
-      </div>
+    <AppLayout>
+      <div className="container mx-auto px-4 py-6">
+        <div className="text-center mb-8">
+          <h1 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">Top Contributors</h1>
+          <p className="text-muted-foreground mt-2">Thanks to our community for making AccessoryAce better!</p>
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 mb-8 items-end">
-        {orderedTopThree.map((user) => {
-            return(
-                <Card key={user.rank} className={`transform transition-transform hover:scale-105 ${
-                    user.rank === 1 ? 'border-primary border-2 shadow-lg md:-translate-y-4' : ''
-                }`}>
-                    <CardContent className="flex flex-col items-center text-center p-6">
-                    <div className="relative mb-4">
-                        <Avatar className="h-24 w-24 border-4 border-card">
-                        <AvatarImage src={user.avatar} alt={user.name} data-ai-hint={user.imageHint} />
-                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
-                        #{user.rank}
-                        </div>
-                    </div>
-                    <p className="font-headline font-semibold text-lg">{user.name}</p>
-                    <p className="text-primary font-bold text-xl">{user.points.toLocaleString()} pts</p>
-                    </CardContent>
-                </Card>
-            )
-        })}
-      </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 mb-8 items-end">
+          {orderedTopThree.map((user) => {
+              return(
+                  <Card key={user.rank} className={`transform transition-transform hover:scale-105 ${
+                      user.rank === 1 ? 'border-primary border-2 shadow-lg md:-translate-y-4' : ''
+                  }`}>
+                      <CardContent className="flex flex-col items-center text-center p-6">
+                      <div className="relative mb-4">
+                          <Avatar className="h-24 w-24 border-4 border-card">
+                          <AvatarImage src={user.avatar} alt={user.name} data-ai-hint={user.imageHint} />
+                          <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <div className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
+                          #{user.rank}
+                          </div>
+                      </div>
+                      <p className="font-headline font-semibold text-lg">{user.name}</p>
+                      <p className="text-primary font-bold text-xl">{user.points.toLocaleString()} pts</p>
+                      </CardContent>
+                  </Card>
+              )
+          })}
+        </div>
 
-      <Separator />
+        <Separator />
 
-      <div className="mt-8 space-y-2">
-        {rest.map((user) => (
-          <Card key={user.rank} className="hover:bg-card/80">
-            <CardContent className="flex items-center p-3 sm:p-4 gap-4">
-              <div className="font-bold text-lg w-8 text-center text-muted-foreground">{user.rank}</div>
-              <Avatar>
-                <AvatarImage src={user.avatar} alt={user.name} data-ai-hint={user.imageHint} />
-                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <p className="font-semibold">{user.name}</p>
-              </div>
-              <div className="text-right">
-                <p className="font-bold text-primary">{user.points.toLocaleString()} pts</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        <div className="mt-8 space-y-2">
+          {rest.map((user) => (
+            <Card key={user.rank} className="hover:bg-card/80">
+              <CardContent className="flex items-center p-3 sm:p-4 gap-4">
+                <div className="font-bold text-lg w-8 text-center text-muted-foreground">{user.rank}</div>
+                <Avatar>
+                  <AvatarImage src={user.avatar} alt={user.name} data-ai-hint={user.imageHint} />
+                  <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <p className="font-semibold">{user.name}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-primary">{user.points.toLocaleString()} pts</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }

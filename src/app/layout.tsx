@@ -3,7 +3,6 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
-import { AppLayout } from '@/components/layout/app-layout';
 
 export const metadata: Metadata = {
   title: 'AccessoryAce',
@@ -36,9 +35,7 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <FirebaseClientProvider>
           <FirebaseErrorListener />
-          <AppLayout>
-            {children}
-          </AppLayout>
+          {children}
           <Toaster />
         </FirebaseClientProvider>
       </body>
