@@ -64,20 +64,21 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
 
       try {
         await runTransaction(firestore, async (transaction) => {
+          const userDoc = await transaction.get(userRef);
+          if (!userDoc.exists()) {
+            throw "User document does not exist!";
+          }
+
           const newAccessoryRef = doc(accessoryCollectionRef);
           transaction.set(newAccessoryRef, {
             ...accessoryData,
             lastUpdated: serverTimestamp(),
             contributor: {
-              uid: submittedBy,
+              name: userDoc.data().displayName || 'Anonymous',
               points: 10,
             },
           });
 
-          const userDoc = await transaction.get(userRef);
-          if (!userDoc.exists()) {
-            throw "User document does not exist!";
-          }
           const newPoints = (userDoc.data().points || 0) + 10;
           transaction.update(userRef, { points: newPoints });
           
