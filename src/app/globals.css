@@ -97,27 +97,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-@layer base {
-  body::before {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: radial-gradient(circle at top left, hsla(var(--primary) / 0.1), transparent 40%),
-                radial-gradient(circle at bottom right, hsla(var(--accent) / 0.1), transparent 40%);
-    z-index: -1;
-    animation: background-pan 15s ease-in-out infinite;
-    will-change: transform;
-  }
-
-  @keyframes background-pan {
-    0% { transform: translate(0%, 0%); }
-    25% { transform: translate(5%, -5%); }
-    50% { transform: translate(0%, 0%); }
-    75% { transform: translate(-5%, 5%); }
-    100% { transform: translate(0%, 0%); }
-  }
-}
