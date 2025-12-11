@@ -21,32 +21,29 @@ export function Header() {
           {!loading &&
             (user ? (
               <>
-                <Link href="/profile" passHref legacyBehavior>
+                <Link href="/profile" passHref>
                     <Button asChild variant="ghost" >
-                        <LayoutDashboard className="h-5 w-5 sm:mr-2" />
-                        <span className="hidden sm:inline">Dashboard</span>
+                        <div><LayoutDashboard className="h-5 w-5 sm:mr-2" /><span className="hidden sm:inline">Dashboard</span></div>
                     </Button>
                 </Link>
               </>
             ) : (
               <>
-                <Link href="/login" passHref legacyBehavior>
+                <Link href="/login" passHref>
                     <Button asChild variant="ghost">
-                         <LogIn className="h-5 w-5 sm:mr-2" />
-                        <span className="hidden sm:inline">Login</span>
+                         <div><LogIn className="h-5 w-5 sm:mr-2" /><span className="hidden sm:inline">Login</span></div>
                     </Button>
                 </Link>
-                <Link href="/register" passHref legacyBehavior>
+                <Link href="/register" passHref>
                     <Button asChild>
-                        <UserPlus className="h-5 w-5 sm:mr-2" />
-                        <span className="hidden sm:inline">Sign Up</span>
+                        <div><UserPlus className="h-5 w-5 sm:mr-2" /><span className="hidden sm:inline">Sign Up</span></div>
                     </Button>
                 </Link>
               </>
             ))}
-            <Link href="/leaderboard" legacyBehavior passHref>
+            <Link href="/leaderboard" passHref>
                 <Button asChild variant="ghost" size="icon" aria-label="Leaderboard">
-                <a><Trophy className="h-5 w-5" /></a>
+                    <Trophy className="h-5 w-5" />
                 </Button>
             </Link>
         </div>
