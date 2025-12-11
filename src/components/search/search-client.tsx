@@ -39,7 +39,7 @@ type SearchFormValues = z.infer<typeof searchSchema>;
 
 export function SearchClient({ categories }: { categories: string[] }) {
   const [activeCategory, setActiveCategory] = useState(categories[0]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<Accessory[] | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<FuzzyAccessorySearchOutput | null>(
@@ -69,6 +69,12 @@ export function SearchClient({ categories }: { categories: string[] }) {
 
   const { data: accessories, loading: accessoriesLoading } =
     useCollection(accessoriesQuery);
+    
+  useEffect(() => {
+      if(!accessoriesLoading){
+          setIsLoading(false)
+      }
+  },[accessoriesLoading])
 
   const performSearch = useCallback(
     async (currentSearchTerm: string) => {
@@ -87,7 +93,8 @@ export function SearchClient({ categories }: { categories: string[] }) {
       await new Promise(resolve => setTimeout(resolve, 300));
 
       if (currentSearchTerm.length < 2) {
-        setResults(accessories);
+        const filtered = accessories.filter(acc => acc.accessoryType === activeCategory);
+        setResults(filtered);
         setIsLoading(false);
         return;
       }
@@ -95,25 +102,18 @@ export function SearchClient({ categories }: { categories: string[] }) {
       const searchLower = currentSearchTerm.toLowerCase();
       const filteredResults = accessories.filter(
         (acc) =>
-          acc.primaryModel.toLowerCase().includes(searchLower) ||
+          acc.accessoryType === activeCategory &&
+          (acc.primaryModel.toLowerCase().includes(searchLower) ||
           (acc.brand && acc.brand.toLowerCase().includes(searchLower)) ||
-          acc.compatibleModels.some(m => m.toLowerCase().includes(searchLower))
+          acc.compatibleModels.some(m => m.toLowerCase().includes(searchLower)))
       );
       
       setResults(filteredResults);
       setIsLoading(false);
     },
-    [accessories]
+    [accessories, activeCategory]
   );
   
-  useEffect(() => {
-    setIsLoading(accessoriesLoading);
-    if (!accessoriesLoading && accessories) {
-      // Set initial results when data loads, but don't show them until search
-       setResults(accessories);
-    }
-  }, [accessories, accessoriesLoading]);
-
 
   const onSubmit = (data: SearchFormValues) => {
     performSearch(data.searchTerm);
@@ -125,11 +125,6 @@ export function SearchClient({ categories }: { categories: string[] }) {
     setResults(null); // Clear results when category changes
     setHasSearched(false); // Reset search status
     setAiSuggestions(null);
-    
-    // Re-filter accessories for the new category
-    if(accessories) {
-      setResults(accessories.filter(a => a.accessoryType === category));
-    }
   }
 
   const formatTimestamp = (timestamp: any) => {
@@ -153,7 +148,7 @@ export function SearchClient({ categories }: { categories: string[] }) {
         </div>
 
         <ScrollArea className="w-full whitespace-nowrap rounded-md">
-          <div className="flex w-max space-x-2 pb-4">
+          <div className="flex justify-center w-full space-x-2 pb-4">
             {categories.map((category) => (
               <Button
                 key={category}
