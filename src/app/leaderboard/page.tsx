@@ -1,7 +1,10 @@
+"use client";
+
 import { Award, Medal, Trophy } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { useEffect, useState } from "react";
 
 const mockLeaderboard = [
   { rank: 1, name: "Rahul Sharma", points: 1256, avatar: "https://picsum.photos/seed/1/150/150", imageHint: 'person portrait' },
@@ -20,8 +23,30 @@ const rankIcons: {[key: number]: React.ReactNode } = {
 };
 
 export default function LeaderboardPage() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
   const topThree = mockLeaderboard.slice(0, 3);
   const rest = mockLeaderboard.slice(3);
+
+  const getOrderedTopThree = () => {
+    if (isMobile) {
+      return topThree;
+    }
+    // Desktop order: 2nd, 1st, 3rd
+    const [first, second, third] = topThree;
+    return [second, first, third];
+  };
+
+  const orderedTopThree = getOrderedTopThree();
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -31,27 +56,23 @@ export default function LeaderboardPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 mb-8 items-end">
-        {topThree.map((user, index) => {
-            let order = index === 0 ? 1 : (index === 1 ? 0 : 2); // 2nd, 1st, 3rd
-            if(window.innerWidth < 768) order = index;
-            const userToDisplay = topThree[order];
-            
+        {orderedTopThree.map((user) => {
             return(
-                <Card key={userToDisplay.rank} className={`transform transition-transform hover:scale-105 ${
-                    order === 1 ? 'border-primary border-2 shadow-lg' : ''
+                <Card key={user.rank} className={`transform transition-transform hover:scale-105 ${
+                    user.rank === 1 ? 'border-primary border-2 shadow-lg md:-translate-y-4' : ''
                 }`}>
                     <CardContent className="flex flex-col items-center text-center p-6">
                     <div className="relative mb-4">
                         <Avatar className="h-24 w-24 border-4 border-card">
-                        <AvatarImage src={userToDisplay.avatar} alt={userToDisplay.name} data-ai-hint={userToDisplay.imageHint} />
-                        <AvatarFallback>{userToDisplay.name.charAt(0)}</AvatarFallback>
+                        <AvatarImage src={user.avatar} alt={user.name} data-ai-hint={user.imageHint} />
+                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
-                        #{userToDisplay.rank}
+                        #{user.rank}
                         </div>
                     </div>
-                    <p className="font-headline font-semibold text-lg">{userToDisplay.name}</p>
-                    <p className="text-primary font-bold text-xl">{userToDisplay.points.toLocaleString()} pts</p>
+                    <p className="font-headline font-semibold text-lg">{user.name}</p>
+                    <p className="text-primary font-bold text-xl">{user.points.toLocaleString()} pts</p>
                     </CardContent>
                 </Card>
             )
