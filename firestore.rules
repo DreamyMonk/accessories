@@ -27,8 +27,7 @@ service cloud.firestore {
       allow create: if request.auth != null 
                     && isNotSuspended(request.auth.uid)
                     && request.resource.data.submittedBy == request.auth.uid
-                    && request.resource.data.status == 'pending'
-                    && ('addToAccessoryId' in request.resource.data || !('addToAccessoryId' in request.resource.data));
+                    && request.resource.data.status == 'pending';
       allow read, update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
