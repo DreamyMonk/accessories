@@ -62,17 +62,17 @@ export default function SubmissionsPage() {
                 Upload a CSV file to add multiple accessories at once.
               </CardDescription>
             </div>
-            <Link href="/dummy-accessories.csv" download passHref legacyBehavior>
+            <a href="/dummy-accessories.csv" download>
               <Button variant="outline" className="mt-4 sm:mt-0">
                 <Download className="mr-2 h-4 w-4" />
                 Download Template
               </Button>
-            </Link>
+            </a>
           </div>
         </CardHeader>
         <CardContent>
            <p className="text-sm text-muted-foreground mb-4">
-            The CSV should have the following columns in this exact order: `accessoryType`, `models`, `brand`, and `source`. The `models` should be a semicolon-separated list.
+            The CSV should have the following columns in this exact order: `accessoryType`, `models`, and `source`. The `models` should be a semicolon-separated list.
           </p>
           <CsvUploadForm />
         </CardContent>
