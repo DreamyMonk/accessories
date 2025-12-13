@@ -5,7 +5,7 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { ArrowRight, LoaderCircle, Search, Wand2 } from 'lucide-react';
+import { ArrowRight, LoaderCircle, Search as SearchIcon, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -37,6 +37,7 @@ export function SearchClient() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<Accessory[] | null>(null);
+  const [searchedTerm, setSearchedTerm] = useState<string>('');
   const [aiSuggestions, setAiSuggestions] = useState<FuzzyAccessorySearchOutput | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -90,6 +91,7 @@ export function SearchClient() {
       setIsLoading(true);
       setHasSearched(true);
       setResults(null);
+      setSearchedTerm(currentSearchTerm);
       setAiSuggestions(null);
       setIsSuggestionBoxOpen(false);
 
@@ -107,9 +109,7 @@ export function SearchClient() {
       const filteredResults = accessories.filter(
         (acc) =>
           acc.accessoryType === activeCategory &&
-          (acc.primaryModel.toLowerCase().includes(searchLower) ||
-          (acc.brand && acc.brand.toLowerCase().includes(searchLower)) ||
-          acc.compatibleModels.some(m => m.toLowerCase().includes(searchLower)))
+          acc.models.some(m => m.toLowerCase().includes(searchLower))
       );
       
       if(filteredResults.length > 0) {
@@ -139,13 +139,18 @@ export function SearchClient() {
   }, []);
 
   useEffect(() => {
-    if (searchTerm && searchTerm.length > 0 && accessories) {
+    if (searchTerm && searchTerm.length > 1 && accessories && activeCategory) {
         const searchLower = searchTerm.toLowerCase();
         const uniqueSuggestions = new Set<string>();
-        accessories.forEach(acc => {
-            if (acc.primaryModel.toLowerCase().includes(searchLower)) {
-                uniqueSuggestions.add(acc.primaryModel);
-            }
+
+        accessories
+          .filter(acc => acc.accessoryType === activeCategory)
+          .forEach(acc => {
+            acc.models.forEach(model => {
+              if (model.toLowerCase().includes(searchLower)) {
+                  uniqueSuggestions.add(model);
+              }
+            });
             if(acc.brand && acc.brand.toLowerCase().includes(searchLower)){
                 uniqueSuggestions.add(acc.brand);
             }
@@ -156,7 +161,7 @@ export function SearchClient() {
         setSuggestions([]);
         setIsSuggestionBoxOpen(false);
     }
-  }, [searchTerm, accessories]);
+  }, [searchTerm, accessories, activeCategory]);
 
 
   const onSubmit = (data: SearchFormValues) => {
@@ -276,7 +281,7 @@ export function SearchClient() {
                             className="flex items-center gap-3 px-4 py-3 hover:bg-muted cursor-pointer"
                             onClick={() => handleSuggestionClick(suggestion)}
                         >
-                          <Search className="h-4 w-4 text-muted-foreground" />
+                          <SearchIcon className="h-4 w-4 text-muted-foreground" />
                           <span>{suggestion}</span>
                         </li>
                     ))}
@@ -296,11 +301,12 @@ export function SearchClient() {
         
         {!isLoading && results && results.length > 0 && hasSearched && (
            <div className="space-y-4">
-            <h2 className="font-headline text-2xl font-bold">{results.length} Match(es) Found</h2>
+            <h2 className="font-headline text-2xl font-bold">{results.length} Result(s) Found</h2>
             {results.map((result, i) => (
               <ResultCard 
                 key={result.id} 
-                result={{...result, lastUpdated: formatTimestamp(result.lastUpdated)}} 
+                result={{...result, lastUpdated: formatTimestamp(result.lastUpdated)}}
+                searchedModel={searchedTerm}
                 index={i} 
               />
             ))}

@@ -40,17 +40,15 @@
       "description": "Represents a mobile device accessory.",
       "type": "object",
       "properties": {
-        "primaryModel": {
-          "type": "string"
-        },
         "accessoryType": {
           "type": "string"
         },
-        "compatibleModels": {
+        "models": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "description": "A list of compatible device models."
         },
         "brand": {
           "type": "string"
@@ -58,6 +56,9 @@
         "contributor": {
           "type": "object",
           "properties": {
+            "uid": {
+              "type": "string"
+            },
             "name": {
               "type": "string"
             },
@@ -74,27 +75,25 @@
           "type": "string"
         }
       },
-      "required": ["primaryModel", "accessoryType", "compatibleModels"]
+      "required": ["accessoryType", "models", "brand"]
     },
     "contribution": {
       "title": "Contribution",
       "description": "A user-submitted data contribution for review.",
       "type": "object",
       "properties": {
-        "primaryModel": {
-          "type": "string"
-        },
         "brand": {
           "type": "string"
         },
         "accessoryType": {
           "type": "string"
         },
-        "compatibleModels": {
+        "models": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+           "description": "A list of compatible device models."
         },
         "source": {
           "type": "string",
@@ -114,10 +113,9 @@
         }
       },
       "required": [
-        "primaryModel",
         "brand",
         "accessoryType",
-        "compatibleModels",
+        "models",
         "status",
         "submittedAt",
         "submittedBy"
@@ -140,7 +138,7 @@
     }
   },
   "auth": {
-    "providers": ["password"]
+    "providers": ["password", "phone"]
   },
   "firestore": {
     "/users/{userId}": {

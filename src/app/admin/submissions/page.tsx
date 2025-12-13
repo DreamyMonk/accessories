@@ -43,7 +43,7 @@ export default function SubmissionsPage() {
             <CardHeader>
             <CardTitle>Add Accessory Manually</CardTitle>
             <CardDescription>
-                Add a single accessory directly to the database.
+                Add a single accessory compatibility group directly to the database.
             </CardDescription>
             </CardHeader>
             <CardContent>
@@ -72,7 +72,7 @@ export default function SubmissionsPage() {
         </CardHeader>
         <CardContent>
            <p className="text-sm text-muted-foreground mb-4">
-            The CSV should have the following columns in this exact order: `primaryModel`, `accessoryType`, `compatibleModels`, `brand`, and `source`. The `compatibleModels` should be a semicolon-separated list.
+            The CSV should have the following columns in this exact order: `accessoryType`, `models`, `brand`, and `source`. The `models` should be a semicolon-separated list.
           </p>
           <CsvUploadForm />
         </CardContent>

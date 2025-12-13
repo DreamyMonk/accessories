@@ -5,11 +5,10 @@ import {
   query,
   where,
   doc,
-  updateDoc,
   runTransaction,
   serverTimestamp,
 } from 'firebase/firestore';
-import { useCollection, useFirestore, useDoc } from '@/firebase';
+import { useCollection, useFirestore } from '@/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '../ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -19,8 +18,7 @@ import { Skeleton } from '../ui/skeleton';
 import { useMemo } from 'react';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { formatDistanceToNow } from 'date-fns';
+import { SubmitterInfo } from './submitter-info';
 
 type SubmissionStatus = 'pending' | 'approved' | 'rejected';
 
@@ -75,15 +73,15 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
         
         // 1. Explicitly build the new accessory object to match the schema
         const newAccessoryData = {
-          primaryModel: contribution.primaryModel,
           accessoryType: contribution.accessoryType,
-          compatibleModels: contribution.compatibleModels,
+          models: contribution.models,
           brand: contribution.brand,
           source: contribution.source || 'User Contribution',
           lastUpdated: serverTimestamp(),
           contributor: {
+            uid: contribution.submittedBy,
             name: userDoc.data().displayName || 'Anonymous',
-            points: 10, // Awarding 10 points for an approved contribution
+            points: 10,
           },
         };
 
@@ -117,10 +115,18 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
     }
   };
 
-  const handleReject = async (id: string) => {
+  const handleReject = async (contribution: any) => {
     if (!firestore) return;
-      const contributionRef = doc(firestore, 'contributions', id);
-      updateDoc(contributionRef, { status: 'rejected' }).catch(serverError => {
+      const contributionRef = doc(firestore, 'contributions', contribution.id);
+      try {
+        await runTransaction(firestore, async (transaction) => {
+          transaction.update(contributionRef, { status: 'rejected' });
+        });
+        toast({
+          title: 'Rejected',
+          description: 'The contribution has been rejected.',
+        });
+      } catch (e: any) {
         const permissionError = new FirestorePermissionError({
           path: contributionRef.path,
           operation: 'update',
@@ -132,11 +138,7 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
           description: 'Could not reject submission. Please check permissions.',
           variant: 'destructive',
         });
-      });
-      toast({
-        title: 'Rejected',
-        description: 'The contribution has been rejected.',
-      });
+      }
   };
 
   if (loading) {
@@ -165,11 +167,13 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
           <CardHeader>
             <div className="flex justify-between items-start">
               <div>
-                <CardTitle>{c.primaryModel} ({c.accessoryType})</CardTitle>
+                <CardTitle>{c.brand} {c.accessoryType}</CardTitle>
                 <CardDescription>
-                  <a href={c.source} target="_blank" rel="noopener noreferrer" className="hover:underline text-primary">
-                    Source
-                  </a>
+                  {c.source ? (
+                     <a href={c.source} target="_blank" rel="noopener noreferrer" className="hover:underline text-primary break-all">
+                      Source Link
+                    </a>
+                  ) : 'No source provided'}
                 </CardDescription>
                 <SubmitterInfo 
                     uid={c.submittedBy} 
@@ -180,9 +184,9 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
             </div>
           </CardHeader>
           <CardContent>
-            <p className="font-semibold mb-2">Compatible Models:</p>
-            <ul className="list-disc list-inside bg-muted/50 p-3 rounded-md">
-                {c.compatibleModels.map((model: string) => <li key={model}>{model}</li>)}
+            <p className="font-semibold mb-2">Compatible Models Submitted:</p>
+            <ul className="list-disc list-inside bg-muted/50 p-3 rounded-md text-sm">
+                {c.models.map((model: string) => <li key={model}>{model}</li>)}
             </ul>
             {status === 'pending' && (
                  <div className="mt-4 flex gap-2 justify-end">
@@ -190,7 +194,7 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
                         size="sm"
                         variant="outline"
                         className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => handleReject(c.id)}
+                        onClick={() => handleReject(c)}
                     >
                         <X className="mr-2 h-4 w-4" /> Reject
                     </Button>
@@ -202,41 +206,6 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
           </CardContent>
         </Card>
       ))}
-    </div>
-  );
-}
-
-
-function SubmitterInfo({ uid, timestamp }: { uid: string, timestamp: any }) {
-  const firestore = useFirestore();
-  const userRef = useMemo(() => {
-    if (!firestore || !uid) return null;
-    return doc(firestore, 'users', uid);
-  }, [firestore, uid]);
-
-  const { data: user, loading } = useDoc(userRef);
-
-  const formattedDate = timestamp?.toDate ? formatDistanceToNow(timestamp.toDate(), { addSuffix: true }) : 'some time ago';
-
-  if (loading) {
-    return <Skeleton className="h-5 w-40 mt-1" />;
-  }
-
-  return (
-    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-      {user ? (
-        <>
-            <Avatar className="h-5 w-5">
-                <AvatarImage src={user.photoURL} />
-                <AvatarFallback>{user.displayName?.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <span>Submitted by {user.displayName}</span>
-        </>
-      ) : (
-        <span>Submitted by an unknown user</span>
-      )}
-      <span>&bull;</span>
-      <span>{formattedDate}</span>
     </div>
   );
 }

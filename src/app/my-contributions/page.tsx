@@ -116,7 +116,7 @@ export default function MyContributionsPage() {
                             <CardHeader>
                                 <div className="flex justify-between items-start">
                                     <div>
-                                        <CardTitle className="font-headline">{c.primaryModel} ({c.accessoryType})</CardTitle>
+                                        <CardTitle className="font-headline">{c.brand} {c.accessoryType}</CardTitle>
                                         <CardDescription>
                                             Submitted {c.submittedAt ? formatDistanceToNow(c.submittedAt.toDate(), { addSuffix: true }) : ''}
                                         </CardDescription>
@@ -127,7 +127,7 @@ export default function MyContributionsPage() {
                              <CardContent>
                                 <p className="font-semibold mb-2">Compatible Models Submitted:</p>
                                 <ul className="list-disc list-inside bg-muted/50 p-3 rounded-md text-sm">
-                                    {c.compatibleModels.map((model: string) => <li key={model}>{model}</li>)}
+                                    {c.models.map((model: string) => <li key={model}>{model}</li>)}
                                 </ul>
                                 {c.source && (
                                     <div className="mt-3 text-sm">

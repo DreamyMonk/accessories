@@ -21,10 +21,9 @@ import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 
 const contributionSchema = z.object({
-  primaryModel: z.string().min(3, "Please enter a primary model name."),
   brand: z.string().min(2, "Please enter a brand name."),
   accessoryType: z.string().min(1, "Please select an accessory type."),
-  compatibleModels: z.string().min(3, "Please list at least one model."),
+  models: z.string().min(3, "Please list at least one model."),
   source: z.string().url().optional().or(z.literal('')),
 });
 
@@ -46,10 +45,9 @@ export default function ContributePage() {
   const form = useForm<ContributionFormValues>({
     resolver: zodResolver(contributionSchema),
     defaultValues: {
-      primaryModel: "",
       brand: "",
       accessoryType: "",
-      compatibleModels: "",
+      models: "",
       source: "",
     },
   });
@@ -66,7 +64,7 @@ export default function ContributePage() {
     
     const contributionData = {
       ...data,
-      compatibleModels: data.compatibleModels.split('\n').map(m => m.trim()).filter(Boolean),
+      models: data.models.split('\n').map(m => m.trim()).filter(Boolean),
       status: "pending",
       submittedAt: serverTimestamp(),
       submittedBy: user.uid,
@@ -136,21 +134,7 @@ export default function ContributePage() {
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                    control={form.control}
-                    name="primaryModel"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Primary Model</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g., iPhone 15 Pro" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
+                <FormField
                     control={form.control}
                     name="brand"
                     render={({ field }) => (
@@ -163,7 +147,6 @@ export default function ContributePage() {
                         </FormItem>
                     )}
                     />
-                </div>
                 <FormField
                   control={form.control}
                   name="accessoryType"
@@ -190,21 +173,21 @@ export default function ContributePage() {
                 />
                 <FormField
                   control={form.control}
-                  name="compatibleModels"
+                  name="models"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Compatible Models</FormLabel>
                       <FormControl>
                         <Textarea
                           placeholder="Enter each model on a new line, e.g.
-Redmi Note 10
-Oppo A74"
+iPhone 15 Pro
+iPhone 15 Pro Max"
                           rows={6}
                           {...field}
                         />
                       </FormControl>
                        <p className="text-sm text-muted-foreground">
-                        Enter all compatible models, including the primary one. Each model on a new line.
+                        Enter all compatible models, each on a new line.
                       </p>
                       <FormMessage />
                     </FormItem>

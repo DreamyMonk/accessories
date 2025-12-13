@@ -41,7 +41,7 @@ export function CsvUploadForm() {
       const lines = csvData.split('\n').filter(line => line.trim() !== '');
       const header = lines.shift()?.split(',').map(h => h.trim());
       
-      const requiredHeaders = ['primaryModel', 'accessoryType', 'compatibleModels', 'brand', 'source'];
+      const requiredHeaders = ['accessoryType', 'models', 'brand', 'source'];
       if (!header || !requiredHeaders.every(h => header.includes(h))) {
         toast({ title: 'Error', description: `CSV must contain the following headers: ${requiredHeaders.join(', ')}`, variant: 'destructive' });
         setIsUploading(false);
@@ -63,21 +63,21 @@ export function CsvUploadForm() {
           const accessoryRow: { [key: string]: string } = {};
           header.forEach((h, i) => accessoryRow[h] = values[i]);
           
-          const { primaryModel, accessoryType, compatibleModels: compatibleModelsStr, brand, source } = accessoryRow;
+          const { accessoryType, models: modelsStr, brand, source } = accessoryRow;
           
-          if (primaryModel && accessoryType && compatibleModelsStr) {
-            const compatibleModels = compatibleModelsStr.split(';').map(m => m.trim());
+          if (accessoryType && modelsStr) {
+            const models = modelsStr.split(';').map(m => m.trim());
             const newAccessoryRef = doc(accessoriesCollectionRef);
             const accessoryData = {
-              primaryModel,
               accessoryType,
-              compatibleModels,
+              models,
               brand: brand || '',
               source: source || 'Bulk Upload',
               lastUpdated: serverTimestamp(),
               contributor: {
                 name: 'Admin',
                 points: 0,
+                uid: 'admin',
               },
             };
             batch.set(newAccessoryRef, accessoryData);

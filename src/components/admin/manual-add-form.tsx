@@ -30,9 +30,8 @@ import { useMemo } from 'react';
 import { Skeleton } from '../ui/skeleton';
 
 const accessorySchema = z.object({
-  primaryModel: z.string().min(3, 'Primary model must be at least 3 characters.'),
   accessoryType: z.string().min(1, 'Please select an accessory type.'),
-  compatibleModels: z.string().min(3, 'Please list at least one model.'),
+  models: z.string().min(3, 'Please list at least one model.'),
   brand: z.string().min(2, 'Brand must be at least 2 characters.'),
   source: z.string().url().optional().or(z.literal('')),
 });
@@ -54,9 +53,8 @@ export function ManualAddForm() {
   const form = useForm<AccessoryFormValues>({
     resolver: zodResolver(accessorySchema),
     defaultValues: {
-      primaryModel: '',
       accessoryType: '',
-      compatibleModels: '',
+      models: '',
       brand: '',
       source: '',
     },
@@ -67,11 +65,12 @@ export function ManualAddForm() {
 
     const accessoryData = {
       ...data,
-      compatibleModels: data.compatibleModels.split('\n').map((m) => m.trim()).filter(Boolean),
+      models: data.models.split('\n').map((m) => m.trim()).filter(Boolean),
       lastUpdated: serverTimestamp(),
       contributor: {
         name: 'Admin',
         points: 0,
+        uid: 'admin',
       },
       source: data.source || 'Manual Entry',
     };
@@ -82,7 +81,7 @@ export function ManualAddForm() {
       .then(() => {
         toast({
           title: 'Accessory Added!',
-          description: `${data.primaryModel} has been added to the database.`,
+          description: `Accessory has been added to the database.`,
         });
         form.reset();
       })
@@ -105,21 +104,7 @@ export function ManualAddForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="primaryModel"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Primary Model</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g., iPhone 15 Pro" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
+        <FormField
             control={form.control}
             name="brand"
             render={({ field }) => (
@@ -132,7 +117,6 @@ export function ManualAddForm() {
               </FormItem>
             )}
           />
-        </div>
 
         <FormField
           control={form.control}
@@ -163,7 +147,7 @@ export function ManualAddForm() {
 
         <FormField
           control={form.control}
-          name="compatibleModels"
+          name="models"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Compatible Models</FormLabel>

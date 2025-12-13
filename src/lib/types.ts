@@ -3,11 +3,11 @@ import { Timestamp } from "firebase/firestore";
 
 export interface Accessory {
   id: string;
-  primaryModel: string;
   accessoryType: string;
-  compatibleModels: string[];
+  models: string[];
   brand: string;
   contributor: {
+    uid: string;
     name: string;
     points: number;
   };
