@@ -70,8 +70,8 @@ export default function AdminLayout({
   }
 
   // If the user is logged in but not an admin, show access denied page,
-  // unless they are on the login page.
-  if (user && !isAdmin && pathname !== '/admin/login') {
+  // unless they are on the login page. This now waits for userData to be loaded.
+  if (user && !isAdmin && pathname !== '/admin/login' && !userDataLoading) {
      return (
       <div className="flex h-screen w-full flex-col items-center justify-center gap-4 p-4 text-center">
         <Shield className="h-16 w-16 text-destructive" />
