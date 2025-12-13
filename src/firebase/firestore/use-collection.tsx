@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   onSnapshot,
   Query,
@@ -17,6 +17,8 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [error, setError] = useState<FirestoreError | null>(null);
 
   useEffect(() => {
+    // If the query is not yet available, do not attempt to subscribe.
+    // Set loading to false and data to an empty array.
     if (!query) {
       setData([]);
       setLoading(false);
@@ -41,7 +43,7 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
       },
       (err: FirestoreError) => {
         const permissionError = new FirestorePermissionError({
-          path: query.path,
+          path: (query as any)._query.path.segments.join('/'),
           operation: 'list',
         });
         errorEmitter.emit('permission-error', permissionError);
@@ -53,7 +55,7 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
     // This is the cleanup function that React will call when the component
     // unmounts or when the dependencies of the effect change.
     return () => unsubscribe();
-  }, [query]); // The effect now correctly depends on the query object.
+  }, [query]); // The effect now correctly depends on the memoized query object.
 
   return { data, loading, error };
 }
