@@ -19,6 +19,8 @@ import { AppLayout } from "@/components/layout/app-layout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AddToExistingForm } from "@/components/contribute/add-to-existing-form";
 
 const contributionSchema = z.object({
   brand: z.string().min(2, "Please enter a brand name."),
@@ -29,10 +31,10 @@ const contributionSchema = z.object({
 
 type ContributionFormValues = z.infer<typeof contributionSchema>;
 
-export default function ContributePage() {
+function CreateNewGroupForm() {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { user, loading: userLoading } = useUser();
+  const { user } = useUser();
   const router = useRouter();
 
   const categoriesQuery = useMemo(() => {
@@ -95,40 +97,12 @@ export default function ContributePage() {
     });
   };
 
-  const renderContent = () => {
-    if (userLoading || categoriesLoading) {
-      return (
-        <div className="container mx-auto px-4 py-6 flex justify-center items-center">
-          <LoaderCircle className="animate-spin h-8 w-8" />
-        </div>
-      );
-    }
-  
-    if (!user) {
-       return (
-        <div className="container mx-auto px-4 py-6">
-          <Card className="max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle className="font-headline text-2xl">Contribute Data</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">You need to be signed in to contribute.</p>
-              <Button asChild>
-                <Link href="/login">Sign In</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      );
-    }
-  
-    return (
-      <div className="container mx-auto px-4 py-6">
-        <Card className="max-w-2xl mx-auto">
+  return (
+      <Card>
           <CardHeader>
-            <CardTitle className="font-headline text-2xl">Contribute Data</CardTitle>
+            <CardTitle className="font-headline text-xl">Create a New Compatibility Group</CardTitle>
             <CardDescription>
-              Help the community by adding new compatibility data. Your contribution will be reviewed and you'll earn points!
+              Submit a new accessory and the models it's compatible with. This creates a new group after approval.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -155,7 +129,7 @@ export default function ContributePage() {
                       <FormLabel>Accessory Type</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger disabled={categoriesLoading}>
                             <SelectValue placeholder="Select an accessory category" />
                           </SelectTrigger>
                         </FormControl>
@@ -216,6 +190,60 @@ iPhone 15 Pro Max"
             </Form>
           </CardContent>
         </Card>
+  )
+}
+
+export default function ContributePage() {
+  const { user, loading: userLoading } = useUser();
+
+  const renderContent = () => {
+    if (userLoading) {
+      return (
+        <div className="container mx-auto px-4 py-6 flex justify-center items-center">
+          <LoaderCircle className="animate-spin h-8 w-8" />
+        </div>
+      );
+    }
+  
+    if (!user) {
+       return (
+        <div className="container mx-auto px-4 py-6">
+          <Card className="max-w-2xl mx-auto">
+            <CardHeader>
+              <CardTitle className="font-headline text-2xl">Contribute Data</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground mb-4">You need to be signed in to contribute.</p>
+              <Button asChild>
+                <Link href="/login">Sign In</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+  
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <div className="text-center mb-8 max-w-2xl mx-auto">
+          <h1 className="text-3xl font-headline font-bold tracking-tight">Contribute Data</h1>
+          <p className="text-muted-foreground mt-2">
+            Help the community by adding new compatibility data. Choose whether to create a new group or add to an existing one.
+          </p>
+        </div>
+
+        <Tabs defaultValue="new" className="max-w-2xl mx-auto">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="new">Create New Group</TabsTrigger>
+            <TabsTrigger value="existing">Add to Existing Group</TabsTrigger>
+          </TabsList>
+          <TabsContent value="new" className="pt-4">
+            <CreateNewGroupForm />
+          </TabsContent>
+          <TabsContent value="existing" className="pt-4">
+            <AddToExistingForm />
+          </TabsContent>
+        </Tabs>
       </div>
     );
   }
