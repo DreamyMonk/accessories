@@ -28,17 +28,11 @@ service cloud.firestore {
                     && isNotSuspended(request.auth.uid)
                     && request.resource.data.submittedBy == request.auth.uid
                     && request.resource.data.status == 'pending'
-                    // Ensure all required fields are present
                     && 'accessoryType' in request.resource.data
                     && 'models' in request.resource.data
                     && 'status' in request.resource.data
                     && 'submittedAt' in request.resource.data
-                    && 'submittedBy' in request.resource.data
-                    // Check size: either 5 required fields or 6 with the optional one
-                    && (request.resource.data.size() == 5 || 
-                       (request.resource.data.size() == 6 && 'addToAccessoryId' in request.resource.data) ||
-                       (request.resource.data.size() == 6 && 'source' in request.resource.data) ||
-                       (request.resource.data.size() == 7 && 'addToAccessoryId' in request.resource.data && 'source' in request.resource.data));
+                    && 'submittedBy' in request.resource.data;
 
       allow read, update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
