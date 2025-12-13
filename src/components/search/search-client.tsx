@@ -150,11 +150,13 @@ export function SearchClient() {
         accessories
           .filter(acc => acc.accessoryType === activeCategory)
           .forEach(acc => {
-            acc.models.forEach(model => {
-              if (model.toLowerCase().includes(searchLower)) {
-                  uniqueSuggestions.add(model);
-              }
-            });
+            if (acc.models && Array.isArray(acc.models)) {
+              acc.models.forEach(model => {
+                if (model.toLowerCase().includes(searchLower)) {
+                    uniqueSuggestions.add(model);
+                }
+              });
+            }
             if(acc.brand && acc.brand.toLowerCase().includes(searchLower)){
                 uniqueSuggestions.add(acc.brand);
             }
@@ -228,7 +230,7 @@ export function SearchClient() {
   const renderResults = () => {
     if (!isMounted) return null;
 
-    if ((isLoading || accessoriesLoading) && hasSearched) {
+    if ((isLoading || (accessoriesLoading && hasSearched))) {
       return (
         <div className="space-y-4">
           <Skeleton className="h-48 w-full rounded-lg" />
