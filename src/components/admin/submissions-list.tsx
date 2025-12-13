@@ -62,7 +62,7 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
       
     const userRef = doc(firestore, 'users', contribution.submittedBy);
     const contributionRef = doc(firestore, 'contributions', contribution.id);
-    const newAccessoryRef = doc(collection(firestore, "accessories"));
+    
 
     try {
       await runTransaction(firestore, async (transaction) => {
@@ -71,6 +71,9 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
           throw new Error("User not found.");
         }
         
+        // This is a new contribution group
+        const newAccessoryRef = doc(collection(firestore, "accessories"));
+
         // 1. Explicitly build the new accessory object to match the schema
         const newAccessoryData = {
           accessoryType: contribution.accessoryType,
@@ -81,7 +84,7 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
           contributor: {
             uid: contribution.submittedBy,
             name: userDoc.data().displayName || 'Anonymous',
-            points: 10,
+            points: 10, // Assign points for new group
           },
         };
 

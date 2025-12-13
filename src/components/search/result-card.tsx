@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Check, Copy, Share2, ShieldAlert } from "lucide-react";
+import { Check, Copy, Share2, ShieldAlert, PlusCircle } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { ContributorInfo } from '@/components/search/contributor-info';
@@ -45,7 +45,7 @@ export function ResultCard({ result, searchedModel, index }: { result: any, sear
         </div>
       </CardHeader>
       <CardContent>
-        {otherModels.length > 0 && (
+        {otherModels.length > 0 ? (
           <>
             <p className="font-semibold mb-2">Also compatible with:</p>
             <ul className="space-y-2">
@@ -68,23 +68,17 @@ export function ResultCard({ result, searchedModel, index }: { result: any, sear
               </Button>
             )}
           </>
+        ) : (
+            <p className="text-sm text-muted-foreground">No other compatible models have been added for this group yet.</p>
         )}
       </CardContent>
       <Separator className="my-4" />
       <CardFooter className="flex-col items-start gap-4">
-        <div className="flex items-center justify-between w-full text-xs text-muted-foreground">
-           <span>Source: {result.source}</span>
-           <span>Updated: {result.lastUpdated}</span>
-        </div>
-        
-        {result.contributor?.uid && (
-            <ContributorInfo uid={result.contributor.uid} points={result.contributor.points} />
-        )}
-
-        <div className="w-full grid grid-cols-2 sm:grid-cols-3 gap-2">
-            <Button variant="outline" onClick={handleCopy}><Copy className="mr-2 h-4 w-4" /> Copy List</Button>
+        <div className="w-full grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <Button variant="secondary" onClick={handleCopy}><Copy className="mr-2 h-4 w-4" /> Copy List</Button>
             <Button variant="outline"><Share2 className="mr-2 h-4 w-4" /> Share</Button>
             <Button variant="outline" className="text-destructive hover:bg-destructive/10 hover:text-destructive"><ShieldAlert className="mr-2 h-4 w-4"/> Report</Button>
+             <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Contribute</Button>
         </div>
       </CardFooter>
     </Card>
