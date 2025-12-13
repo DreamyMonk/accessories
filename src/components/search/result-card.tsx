@@ -35,11 +35,10 @@ const newModelSchema = z.object({
 });
 type NewModelFormValues = z.infer<typeof newModelSchema>;
 
-function ContributeToGroupDialog({ result }: { result: any }) {
+function ContributeToGroupDialog({ result, open, onOpenChange }: { result: any, open: boolean, onOpenChange: (open: boolean) => void }) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user } = useUser();
-  const [isOpen, setIsOpen] = useState(false);
 
   const form = useForm<NewModelFormValues>({
     resolver: zodResolver(newModelSchema),
@@ -76,7 +75,7 @@ function ContributeToGroupDialog({ result }: { result: any }) {
           description: "Thank you for your contribution. It will be reviewed shortly.",
         });
         form.reset();
-        setIsOpen(false); // Close dialog on success
+        onOpenChange(false); // Close dialog on success
     }).catch(error => {
         const permissionError = new FirestorePermissionError({
             path: contributionsCollectionRef.path,
@@ -95,6 +94,7 @@ function ContributeToGroupDialog({ result }: { result: any }) {
 
   if (!user) {
     return (
+       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
             <DialogHeader>
                 <DialogTitle>Contribute to this Group</DialogTitle>
@@ -110,47 +110,51 @@ function ContributeToGroupDialog({ result }: { result: any }) {
                 </DialogClose>
             </DialogFooter>
         </DialogContent>
+       </Dialog>
     )
   }
 
   return (
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>Contribute to this Group</DialogTitle>
-        <DialogDescription>
-          Found another model that's compatible with the <span className="font-semibold">{result.brand} {result.accessoryType}</span>? Add it here.
-        </DialogDescription>
-      </DialogHeader>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="model"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>New Compatible Model</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g., iPhone 17 Pro Max" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <DialogFooter>
-            <DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose>
-            <Button type="submit" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? "Submitting..." : "Submit for Review"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </Form>
-    </DialogContent>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+        <DialogHeader>
+            <DialogTitle>Contribute to this Group</DialogTitle>
+            <DialogDescription>
+            Found another model that's compatible with the <span className="font-semibold">{result.brand} {result.accessoryType}</span>? Add it here.
+            </DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+                control={form.control}
+                name="model"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>New Compatible Model</FormLabel>
+                    <FormControl>
+                    <Input placeholder="e.g., iPhone 17 Pro Max" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <DialogFooter>
+                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? "Submitting..." : "Submit for Review"}
+                </Button>
+            </DialogFooter>
+            </form>
+        </Form>
+        </DialogContent>
+    </Dialog>
   );
 }
 
 
 export function ResultCard({ result, searchedModel, index }: { result: any, searchedModel: string, index: number }) {
   const [showAll, setShowAll] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const mainModel = result.models.find((m: string) => m.toLowerCase() === searchedModel.toLowerCase()) || searchedModel;
@@ -215,12 +219,8 @@ export function ResultCard({ result, searchedModel, index }: { result: any, sear
             <Button variant="secondary" onClick={handleCopy}><Copy className="mr-2 h-4 w-4" /> Copy List</Button>
             <Button variant="outline"><Share2 className="mr-2 h-4 w-4" /> Share</Button>
             <Button variant="outline" className="text-destructive hover:bg-destructive/10 hover:text-destructive"><ShieldAlert className="mr-2 h-4 w-4"/> Report</Button>
-            <Dialog>
-                <DialogTrigger asChild>
-                    <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Contribute</Button>
-                </DialogTrigger>
-                <ContributeToGroupDialog result={result} />
-            </Dialog>
+            <Button variant="outline" onClick={() => setIsDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> Contribute</Button>
+            <ContributeToGroupDialog result={result} open={isDialogOpen} onOpenChange={setIsDialogOpen} />
         </div>
       </CardFooter>
     </Card>
