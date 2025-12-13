@@ -23,7 +23,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AddToExistingForm } from "@/components/contribute/add-to-existing-form";
 
 const contributionSchema = z.object({
-  brand: z.string().min(2, "Please enter a brand name."),
   accessoryType: z.string().min(1, "Please select an accessory type."),
   models: z.string().min(3, "Please list at least one model."),
   source: z.string().url().optional().or(z.literal('')),
@@ -47,7 +46,6 @@ function CreateNewGroupForm() {
   const form = useForm<ContributionFormValues>({
     resolver: zodResolver(contributionSchema),
     defaultValues: {
-      brand: "",
       accessoryType: "",
       models: "",
       source: "",
@@ -108,19 +106,6 @@ function CreateNewGroupForm() {
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <FormField
-                    control={form.control}
-                    name="brand"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Brand</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g., Apple" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
                 <FormField
                   control={form.control}
                   name="accessoryType"

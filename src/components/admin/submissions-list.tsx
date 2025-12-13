@@ -78,7 +78,6 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
         const newAccessoryData = {
           accessoryType: contribution.accessoryType,
           models: contribution.models,
-          brand: contribution.brand,
           source: contribution.source || 'User Contribution',
           lastUpdated: serverTimestamp(),
           contributor: {
@@ -170,7 +169,7 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
           <CardHeader>
             <div className="flex justify-between items-start">
               <div>
-                <CardTitle>{c.brand} {c.accessoryType}</CardTitle>
+                <CardTitle>{c.accessoryType}</CardTitle>
                 <CardDescription>
                   {c.source ? (
                      <a href={c.source} target="_blank" rel="noopener noreferrer" className="hover:underline text-primary break-all">

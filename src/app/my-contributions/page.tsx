@@ -116,7 +116,7 @@ export default function MyContributionsPage() {
                             <CardHeader>
                                 <div className="flex justify-between items-start">
                                     <div>
-                                        <CardTitle className="font-headline">{c.brand} {c.accessoryType}</CardTitle>
+                                        <CardTitle className="font-headline">{c.accessoryType}</CardTitle>
                                         <CardDescription>
                                             Submitted {c.submittedAt ? formatDistanceToNow(c.submittedAt.toDate(), { addSuffix: true }) : ''}
                                         </CardDescription>

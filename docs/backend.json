@@ -50,9 +50,6 @@
           },
           "description": "A list of compatible device models."
         },
-        "brand": {
-          "type": "string"
-        },
         "contributor": {
           "type": "object",
           "properties": {
@@ -75,16 +72,13 @@
           "type": "string"
         }
       },
-      "required": ["accessoryType", "models", "brand"]
+      "required": ["accessoryType", "models"]
     },
     "contribution": {
       "title": "Contribution",
       "description": "A user-submitted data contribution for review.",
       "type": "object",
       "properties": {
-        "brand": {
-          "type": "string"
-        },
         "accessoryType": {
           "type": "string"
         },
@@ -113,7 +107,6 @@
         }
       },
       "required": [
-        "brand",
         "accessoryType",
         "models",
         "status",

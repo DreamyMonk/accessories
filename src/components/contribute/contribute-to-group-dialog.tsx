@@ -49,7 +49,6 @@ export function ContributeToGroupDialog({ result, open, onOpenChange }: { result
     }
 
     const contributionData = {
-      brand: result.brand,
       accessoryType: result.accessoryType,
       models: [data.model], // This is an array with the single new model
       source: "User Contribution",
@@ -113,7 +112,7 @@ export function ContributeToGroupDialog({ result, open, onOpenChange }: { result
         <DialogHeader>
             <DialogTitle>Contribute to this Group</DialogTitle>
             <DialogDescription>
-            Found another model that's compatible with the <span className="font-semibold">{result.brand} {result.accessoryType}</span>? Add it here.
+            Found another model that's compatible with the <span className="font-semibold">{result.accessoryType}</span>? Add it here.
             </DialogDescription>
         </DialogHeader>
         <Form {...form}>

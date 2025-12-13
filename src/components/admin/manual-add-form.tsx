@@ -32,7 +32,6 @@ import { Skeleton } from '../ui/skeleton';
 const accessorySchema = z.object({
   accessoryType: z.string().min(1, 'Please select an accessory type.'),
   models: z.string().min(3, 'Please list at least one model.'),
-  brand: z.string().min(2, 'Brand must be at least 2 characters.'),
   source: z.string().url().optional().or(z.literal('')),
 });
 
@@ -55,7 +54,6 @@ export function ManualAddForm() {
     defaultValues: {
       accessoryType: '',
       models: '',
-      brand: '',
       source: '',
     },
   });
@@ -104,20 +102,6 @@ export function ManualAddForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-            control={form.control}
-            name="brand"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Brand</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g., Apple" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
         <FormField
           control={form.control}
           name="accessoryType"

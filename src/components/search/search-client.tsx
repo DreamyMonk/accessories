@@ -86,12 +86,6 @@ export function SearchClient() {
 
   const performSearch = useCallback(
     async (currentSearchTerm: string) => {
-      if (!accessories) {
-        setResults(null);
-        setIsLoading(false);
-        return;
-      }
-
       setIsLoading(true);
       setHasSearched(true);
       setResults(null);
@@ -99,8 +93,13 @@ export function SearchClient() {
       setAiSuggestions(null);
       setIsSuggestionBoxOpen(false);
 
+      if (!accessories) {
+        setResults(null);
+        setIsLoading(false);
+        return;
+      }
+      
       try {
-        // A small delay to make the loading feel less jarring
         await new Promise((resolve) => setTimeout(resolve, 300));
 
         if (currentSearchTerm.length < 1) {
@@ -120,7 +119,6 @@ export function SearchClient() {
         if (filteredResults.length > 0) {
           setResults(filteredResults);
         } else {
-          // If no results, call the AI fuzzy search
           const suggestions = await fuzzyAccessorySearch({
             searchTerm: currentSearchTerm,
           });
@@ -128,7 +126,6 @@ export function SearchClient() {
         }
       } catch (error) {
         console.error("Error during search:", error);
-        // Optionally, set an error state to show in the UI
       } finally {
         setIsLoading(false);
       }
@@ -163,9 +160,6 @@ export function SearchClient() {
                     uniqueSuggestions.add(model);
                 }
               });
-            }
-            if(acc.brand && acc.brand.toLowerCase().includes(searchLower)){
-                uniqueSuggestions.add(acc.brand);
             }
         });
         setSuggestions(Array.from(uniqueSuggestions).slice(0, 10)); // Limit to 10 suggestions
@@ -366,7 +360,7 @@ export function SearchClient() {
                   )}
                 </Button>
                  <p className="text-sm text-center text-muted-foreground">
-                  Enter a brand or model to see auto-suggestions.
+                  Enter a model to see auto-suggestions.
                 </p>
               </form>
             </Form>

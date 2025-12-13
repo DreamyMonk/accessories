@@ -20,18 +20,11 @@ export function AddToExistingForm() {
 
     const accessoriesQuery = useMemo(() => {
         if (!firestore || !submittedSearch) return null;
-
-        const allCapsQuery = query(
-            collection(firestore, 'accessories'),
-            where('brand', '>=', submittedSearch.toUpperCase()),
-            where('brand', '<=', submittedSearch.toUpperCase() + '\uf8ff')
-        );
-
+        
         // This is a simplified search. A more robust solution might use a dedicated search service.
         return query(
             collection(firestore, 'accessories'),
-            where('brand', '>=', submittedSearch),
-            where('brand', '<=', submittedSearch + '\uf8ff')
+            where('models', 'array-contains', submittedSearch)
         );
     }, [firestore, submittedSearch]);
 
@@ -58,13 +51,13 @@ export function AddToExistingForm() {
             <CardHeader>
                 <CardTitle className="font-headline text-xl">Add a Model to an Existing Group</CardTitle>
                 <CardDescription>
-                    First, search for an accessory group by its brand. Then you can add a new compatible model to it.
+                    First, search for an accessory group by a model name. Then you can add a new compatible model to it.
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <form onSubmit={handleSearch} className="flex gap-2 mb-6">
                     <Input 
-                        placeholder="Search for a brand..."
+                        placeholder="Search for a model..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -84,7 +77,7 @@ export function AddToExistingForm() {
                     {!loading && accessories && accessories.map(acc => (
                         <div key={acc.id} className="p-3 border rounded-md flex justify-between items-center">
                             <div>
-                                <p className="font-semibold">{acc.brand} {acc.accessoryType}</p>
+                                <p className="font-semibold">{acc.accessoryType}</p>
                                 <p className="text-xs text-muted-foreground">{acc.models.length} compatible models</p>
                             </div>
                             <Button variant="outline" size="sm" onClick={() => handleSelectAccessory(acc)}>Add Model</Button>

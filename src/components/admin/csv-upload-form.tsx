@@ -41,7 +41,7 @@ export function CsvUploadForm() {
       const lines = csvData.split('\n').filter(line => line.trim() !== '');
       const header = lines.shift()?.split(',').map(h => h.trim());
       
-      const requiredHeaders = ['accessoryType', 'models', 'brand', 'source'];
+      const requiredHeaders = ['accessoryType', 'models', 'source'];
       if (!header || !requiredHeaders.every(h => header.includes(h))) {
         toast({ title: 'Error', description: `CSV must contain the following headers: ${requiredHeaders.join(', ')}`, variant: 'destructive' });
         setIsUploading(false);
@@ -63,7 +63,7 @@ export function CsvUploadForm() {
           const accessoryRow: { [key: string]: string } = {};
           header.forEach((h, i) => accessoryRow[h] = values[i]);
           
-          const { accessoryType, models: modelsStr, brand, source } = accessoryRow;
+          const { accessoryType, models: modelsStr, source } = accessoryRow;
           
           if (accessoryType && modelsStr) {
             const models = modelsStr.split(';').map(m => m.trim());
@@ -71,7 +71,6 @@ export function CsvUploadForm() {
             const accessoryData = {
               accessoryType,
               models,
-              brand: brand || '',
               source: source || 'Bulk Upload',
               lastUpdated: serverTimestamp(),
               contributor: {
