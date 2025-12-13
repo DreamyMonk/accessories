@@ -108,6 +108,10 @@
         "submittedBy": {
           "type": "string",
           "description": "UID of the user who submitted."
+        },
+        "addToAccessoryId": {
+          "type": "string",
+          "description": "The ID of an existing accessory to add models to."
         }
       },
       "required": [

@@ -24,7 +24,11 @@ service cloud.firestore {
     // Contributions can be created by any authenticated, non-suspended user.
     // They can only be read or updated by admins.
     match /contributions/{contributionId} {
-      allow create: if request.auth != null && isNotSuspended(request.auth.uid);
+      allow create: if request.auth != null 
+                    && isNotSuspended(request.auth.uid)
+                    && request.resource.data.submittedBy == request.auth.uid
+                    && request.resource.data.status == 'pending'
+                    && ('addToAccessoryId' in request.resource.data || !('addToAccessoryId' in request.resource.data));
       allow read, update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
