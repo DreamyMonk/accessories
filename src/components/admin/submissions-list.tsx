@@ -62,36 +62,61 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
       
     const contributionRef = doc(firestore, 'contributions', contribution.id);
     
-
     try {
       await runTransaction(firestore, async (transaction) => {
         const userRef = doc(firestore, 'users', contribution.submittedBy);
         const userDoc = await transaction.get(userRef);
 
-        // This is a new contribution group
-        const newAccessoryRef = doc(collection(firestore, "accessories"));
+        const contributorExists = userDoc.exists();
+        const contributorName = contributorExists ? userDoc.data().displayName : 'Admin';
+        
+        // Check if this contribution is to an existing accessory
+        if (contribution.addToAccessoryId) {
+            const accessoryRef = doc(firestore, 'accessories', contribution.addToAccessoryId);
+            const accessoryDoc = await transaction.get(accessoryRef);
 
-        const newAccessoryData = {
-          accessoryType: contribution.accessoryType,
-          models: contribution.models,
-          source: contribution.source || 'User Contribution',
-          lastUpdated: serverTimestamp(),
-          contributor: {
-            uid: contribution.submittedBy,
-            name: userDoc.exists() ? userDoc.data().displayName : 'Admin',
-            points: 10, // Assign points for new group
-          },
-        };
+            if (!accessoryDoc.exists()) {
+                throw new Error("Accessory to be updated does not exist.");
+            }
 
-        // Perform all writes in the transaction
-        transaction.set(newAccessoryRef, newAccessoryData);
+            const existingModels = accessoryDoc.data().models || [];
+            const newModels = contribution.models.filter((m: string) => !existingModels.includes(m));
+            
+            if (newModels.length > 0) {
+                transaction.update(accessoryRef, {
+                    models: [...existingModels, ...newModels],
+                    lastUpdated: serverTimestamp(),
+                });
+            }
 
-        // Only update points if the user is not an admin
-        if (userDoc.exists()) {
-            const newPoints = (userDoc.data().points || 0) + 10;
-            transaction.update(userRef, { points: newPoints });
+             if (contributorExists) {
+                const newPoints = (userDoc.data().points || 0) + 5; // Points for adding a model
+                transaction.update(userRef, { points: newPoints });
+            }
+
+        } else {
+            // This is a new contribution group
+            const newAccessoryRef = doc(collection(firestore, "accessories"));
+            const newAccessoryData = {
+              accessoryType: contribution.accessoryType,
+              models: contribution.models,
+              source: contribution.source || 'User Contribution',
+              lastUpdated: serverTimestamp(),
+              contributor: {
+                uid: contribution.submittedBy,
+                name: contributorName,
+                points: 10, // Points for new group
+              },
+            };
+            transaction.set(newAccessoryRef, newAccessoryData);
+
+            if (contributorExists) {
+                const newPoints = (userDoc.data().points || 0) + 10;
+                transaction.update(userRef, { points: newPoints });
+            }
         }
         
+        // Mark contribution as approved
         transaction.update(contributionRef, { status: 'approved' });
       });
 
@@ -189,6 +214,9 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
             <ul className="list-disc list-inside bg-muted/50 p-3 rounded-md text-sm">
                 {c.models.map((model: string) => <li key={model}>{model}</li>)}
             </ul>
+            {c.addToAccessoryId && (
+                <p className="text-xs text-muted-foreground mt-2">Suggested addition to an existing group.</p>
+            )}
             {status === 'pending' && (
                  <div className="mt-4 flex gap-2 justify-end">
                     <Button
