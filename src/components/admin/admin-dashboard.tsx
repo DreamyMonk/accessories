@@ -5,6 +5,7 @@ import { useCollection, useFirestore } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
 import { LoaderCircle, Users, FileCheck, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
+import { useMemo } from 'react';
 
 const StatCard = ({ title, value, icon, href, loading }: { title: string, value: number, icon: React.ReactNode, href: string, loading: boolean }) => (
     <Link href={href}>
@@ -24,29 +25,27 @@ const StatCard = ({ title, value, icon, href, loading }: { title: string, value:
 export function AdminDashboard() {
   const firestore = useFirestore();
 
-  const { data: users, loading: usersLoading } = useCollection(
-    firestore ? query(collection(firestore, 'users')) : null
-  );
-  const { data: accessories, loading: accessoriesLoading } = useCollection(
-    firestore ? query(collection(firestore, 'accessories')) : null
-  );
-  const { data: submissions, loading: submissionsLoading } = useCollection(
-    firestore ? query(collection(firestore, 'contributions')) : null
-  );
+  const usersQuery = useMemo(() => firestore ? query(collection(firestore, 'users')) : null, [firestore]);
+  const accessoriesQuery = useMemo(() => firestore ? query(collection(firestore, 'accessories')) : null, [firestore]);
+  const submissionsQuery = useMemo(() => firestore ? query(collection(firestore, 'contributions')) : null, [firestore]);
+
+  const { data: users, loading: usersLoading } = useCollection(usersQuery);
+  const { data: accessories, loading: accessoriesLoading } = useCollection(accessoriesQuery);
+  const { data: submissions, loading: submissionsLoading } = useCollection(submissionsQuery);
  
   const stats = [
     {
       title: 'Total Users',
       value: users?.length ?? 0,
       icon: <Users className="h-4 w-4 text-muted-foreground" />,
-      href: '#',
+      href: '/admin/users',
       loading: usersLoading,
     },
     {
       title: 'Live Accessories',
       value: accessories?.length ?? 0,
       icon: <ShieldCheck className="h-4 w-4 text-muted-foreground" />,
-      href: '#',
+      href: '/admin/submissions',
       loading: accessoriesLoading,
     },
     {
