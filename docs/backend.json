@@ -31,6 +31,10 @@
           "type": "string",
           "enum": ["user", "admin"],
           "description": "The user's role."
+        },
+        "isSuspended": {
+          "type": "boolean",
+          "description": "Indicates if the user's account is suspended."
         }
       },
       "required": ["uid", "displayName", "email", "points", "role"]
