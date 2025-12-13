@@ -69,9 +69,8 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
     try {
       await runTransaction(firestore, async (transaction) => {
         const userDoc = await transaction.get(userRef);
-
         if (!userDoc.exists()) {
-          throw new Error(`User with ID ${contribution.submittedBy} not found.`);
+          throw new Error("User not found.");
         }
         
         // 1. Explicitly build the new accessory object to match the schema
