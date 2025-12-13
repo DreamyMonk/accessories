@@ -28,6 +28,7 @@ import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import Link from 'next/link';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { ContributorInfo } from './contributor-info';
 
 
 const newModelSchema = z.object({
@@ -56,7 +57,6 @@ function ContributeToGroupDialog({ result, open, onOpenChange }: { result: any, 
     }
 
     const contributionData = {
-      brand: result.brand,
       accessoryType: result.accessoryType,
       models: [data.model], // This is an array with the single new model
       source: "User Contribution",
@@ -120,7 +120,7 @@ function ContributeToGroupDialog({ result, open, onOpenChange }: { result: any, 
         <DialogHeader>
             <DialogTitle>Contribute to this Group</DialogTitle>
             <DialogDescription>
-            Found another model that's compatible with the <span className="font-semibold">{result.brand} {result.accessoryType}</span>? Add it here.
+            Found another model that's compatible with the <span className="font-semibold">{result.accessoryType}</span>? Add it here.
             </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -139,7 +139,9 @@ function ContributeToGroupDialog({ result, open, onOpenChange }: { result: any, 
                 )}
             />
             <DialogFooter>
-                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+                <DialogClose asChild>
+                    <Button type="button" variant="ghost">Cancel</Button>
+                </DialogClose>
                 <Button type="submit" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? "Submitting..." : "Submit for Review"}
                 </Button>
@@ -220,8 +222,10 @@ export function ResultCard({ result, searchedModel, index }: { result: any, sear
             <Button variant="outline"><Share2 className="mr-2 h-4 w-4" /> Share</Button>
             <Button variant="outline" className="text-destructive hover:bg-destructive/10 hover:text-destructive"><ShieldAlert className="mr-2 h-4 w-4"/> Report</Button>
             <Button variant="outline" onClick={() => setIsDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> Contribute</Button>
-            <ContributeToGroupDialog result={result} open={isDialogOpen} onOpenChange={setIsDialogOpen} />
         </div>
+        <Separator className="my-4" />
+         <ContributorInfo uid={result.contributor?.uid} points={result.contributor?.points} />
+         <ContributeToGroupDialog result={result} open={isDialogOpen} onOpenChange={setIsDialogOpen} />
       </CardFooter>
     </Card>
   );
