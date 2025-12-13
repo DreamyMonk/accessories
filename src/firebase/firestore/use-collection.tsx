@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -16,11 +15,6 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [data, setData] = useState<(T & { id: string })[] | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<FirestoreError | null>(null);
-
-  const queryRef = useRef(query);
-  useEffect(() => {
-    queryRef.current = query;
-  });
 
   useEffect(() => {
     if (!query) {
@@ -56,8 +50,10 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
       }
     );
 
+    // This is the cleanup function that React will call when the component
+    // unmounts or when the dependencies of the effect change.
     return () => unsubscribe();
-  }, [query]);
+  }, [query]); // The effect now correctly depends on the query object.
 
   return { data, loading, error };
 }
