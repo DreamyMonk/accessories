@@ -5,7 +5,7 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { ArrowRight, LoaderCircle } from 'lucide-react';
+import { ArrowRight, LoaderCircle, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -24,6 +24,7 @@ import { useCollection, useFirestore } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import type { Accessory } from '@/lib/types';
 import { format } from 'date-fns';
+import { fuzzyAccessorySearch, FuzzyAccessorySearchOutput } from '@/ai/flows/fuzzy-accessory-search';
 
 const searchSchema = z.object({
   searchTerm: z.string(),
@@ -35,6 +36,7 @@ export function SearchClient() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<Accessory[] | null>(null);
+  const [aiSuggestions, setAiSuggestions] = useState<FuzzyAccessorySearchOutput | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const firestore = useFirestore();
 
@@ -45,6 +47,8 @@ export function SearchClient() {
     },
     mode: 'onChange',
   });
+
+  const searchTerm = form.watch('searchTerm');
 
   const categoriesQuery = useMemo(() => {
     if (!firestore) return null;
@@ -70,12 +74,6 @@ export function SearchClient() {
   const { data: accessories, loading: accessoriesLoading } =
     useCollection(accessoriesQuery);
 
-  useEffect(() => {
-    if(!accessoriesLoading){
-        setIsLoading(false)
-    }
-  },[accessoriesLoading])
-
   const performSearch = useCallback(
     async (currentSearchTerm: string) => {
       if (!accessories) {
@@ -87,13 +85,15 @@ export function SearchClient() {
       setIsLoading(true);
       setHasSearched(true);
       setResults(null);
+      setAiSuggestions(null);
 
+      // A small delay to make the loading feel less jarring
       await new Promise(resolve => setTimeout(resolve, 300));
 
       if (currentSearchTerm.length < 2) {
-        const filtered = accessories.filter(acc => acc.accessoryType === activeCategory);
-        setResults(filtered);
         setIsLoading(false);
+        setResults(null); // Clear results if search term is too short
+        setHasSearched(false);
         return;
       }
       
@@ -106,12 +106,34 @@ export function SearchClient() {
           acc.compatibleModels.some(m => m.toLowerCase().includes(searchLower)))
       );
       
-      setResults(filteredResults);
+      if(filteredResults.length > 0) {
+        setResults(filteredResults);
+      } else {
+        // If no results, call the AI fuzzy search
+        const suggestions = await fuzzyAccessorySearch({ searchTerm: currentSearchTerm });
+        setAiSuggestions(suggestions);
+      }
+
       setIsLoading(false);
     },
     [accessories, activeCategory]
   );
   
+  useEffect(() => {
+    const debounceSearch = setTimeout(() => {
+      if(searchTerm) {
+        performSearch(searchTerm);
+      } else {
+        // Clear results when search term is empty
+        setResults(null);
+        setAiSuggestions(null);
+        setHasSearched(false);
+      }
+    }, 500); // 500ms debounce delay
+
+    return () => clearTimeout(debounceSearch);
+  }, [searchTerm, performSearch]);
+
 
   const onSubmit = (data: SearchFormValues) => {
     performSearch(data.searchTerm);
@@ -121,6 +143,7 @@ export function SearchClient() {
     setActiveCategory(category);
     form.setValue('searchTerm', '');
     setResults(null);
+    setAiSuggestions(null);
     setHasSearched(false);
   }
 
@@ -205,7 +228,7 @@ export function SearchClient() {
                   )}
                 </Button>
                  <p className="text-sm text-center text-muted-foreground">
-                  Enter a brand or model and click search.
+                  Enter a brand or model to see auto-suggestions.
                 </p>
               </form>
             </Form>
@@ -221,7 +244,7 @@ export function SearchClient() {
           </div>
         )}
         
-        {!isLoading && !accessoriesLoading && results && results.length > 0 && hasSearched && (
+        {!isLoading && results && results.length > 0 && hasSearched && (
            <div className="space-y-4">
             <h2 className="font-headline text-2xl font-bold">{results.length} Match(es) Found</h2>
             {results.map((result, i) => (
@@ -234,12 +257,48 @@ export function SearchClient() {
           </div>
         )}
 
-        {!isLoading && !accessoriesLoading && hasSearched && (!results || results.length === 0) && (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <p className="text-muted-foreground">No accessories found for your search. Try another category or a broader search term.</p>
-            </CardContent>
-          </Card>
+        {!isLoading && hasSearched && (!results || results.length === 0) && (
+          <>
+          {aiSuggestions ? (
+             <Card>
+                <CardContent className="p-6">
+                   <div className="flex items-center gap-2 mb-4">
+                      <Wand2 className="h-6 w-6 text-primary" />
+                      <h3 className="font-headline text-xl font-semibold">No exact matches found. How about these?</h3>
+                   </div>
+                  {aiSuggestions.suggestedMatches.length > 0 && (
+                    <div className="mb-4">
+                      <h4 className="font-semibold mb-2">Suggested Matches:</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {aiSuggestions.suggestedMatches.map((suggestion, i) => (
+                          <Button key={i} variant="outline" onClick={() => form.setValue('searchTerm', suggestion)}>{suggestion}</Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {aiSuggestions.alternativeSearchTerms.length > 0 && (
+                     <div>
+                      <h4 className="font-semibold mb-2">Alternative Searches:</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {aiSuggestions.alternativeSearchTerms.map((term, i) => (
+                           <Button key={i} variant="outline" onClick={() => form.setValue('searchTerm', term)}>{term}</Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {aiSuggestions.recommendFollowUp && (
+                     <p className="mt-4 text-sm text-muted-foreground">Try asking a follow-up question for more help.</p>
+                  )}
+                </CardContent>
+             </Card>
+          ) : (
+             <Card>
+              <CardContent className="p-6 text-center">
+                <p className="text-muted-foreground">No accessories found for your search. Try another category or a broader search term.</p>
+              </CardContent>
+            </Card>
+          )}
+          </>
         )}
       </section>
     </div>
