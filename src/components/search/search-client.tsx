@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { ArrowRight, LoaderCircle, Wand2 } from 'lucide-react';
+import { ArrowRight, LoaderCircle, Search, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -25,6 +25,7 @@ import { collection, query, where, orderBy } from 'firebase/firestore';
 import type { Accessory } from '@/lib/types';
 import { format } from 'date-fns';
 import { fuzzyAccessorySearch, FuzzyAccessorySearchOutput } from '@/ai/flows/fuzzy-accessory-search';
+import { cn } from '@/lib/utils';
 
 const searchSchema = z.object({
   searchTerm: z.string(),
@@ -38,7 +39,11 @@ export function SearchClient() {
   const [results, setResults] = useState<Accessory[] | null>(null);
   const [aiSuggestions, setAiSuggestions] = useState<FuzzyAccessorySearchOutput | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [isSuggestionBoxOpen, setIsSuggestionBoxOpen] = useState(false);
   const firestore = useFirestore();
+  const searchCardRef = useRef<HTMLDivElement>(null);
+
 
   const form = useForm<SearchFormValues>({
     resolver: zodResolver(searchSchema),
@@ -86,13 +91,14 @@ export function SearchClient() {
       setHasSearched(true);
       setResults(null);
       setAiSuggestions(null);
+      setIsSuggestionBoxOpen(false);
 
       // A small delay to make the loading feel less jarring
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      if (currentSearchTerm.length < 2) {
+      if (currentSearchTerm.length < 1) {
         setIsLoading(false);
-        setResults(null); // Clear results if search term is too short
+        setResults(null);
         setHasSearched(false);
         return;
       }
@@ -120,24 +126,47 @@ export function SearchClient() {
   );
   
   useEffect(() => {
-    const debounceSearch = setTimeout(() => {
-      if(searchTerm) {
-        performSearch(searchTerm);
-      } else {
-        // Clear results when search term is empty
-        setResults(null);
-        setAiSuggestions(null);
-        setHasSearched(false);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchCardRef.current && !searchCardRef.current.contains(event.target as Node)) {
+        setIsSuggestionBoxOpen(false);
       }
-    }, 500); // 500ms debounce delay
+    };
 
-    return () => clearTimeout(debounceSearch);
-  }, [searchTerm, performSearch]);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (searchTerm && searchTerm.length > 0 && accessories) {
+        const searchLower = searchTerm.toLowerCase();
+        const uniqueSuggestions = new Set<string>();
+        accessories.forEach(acc => {
+            if (acc.primaryModel.toLowerCase().includes(searchLower)) {
+                uniqueSuggestions.add(acc.primaryModel);
+            }
+            if(acc.brand && acc.brand.toLowerCase().includes(searchLower)){
+                uniqueSuggestions.add(acc.brand);
+            }
+        });
+        setSuggestions(Array.from(uniqueSuggestions).slice(0, 10)); // Limit to 10 suggestions
+        setIsSuggestionBoxOpen(uniqueSuggestions.size > 0);
+    } else {
+        setSuggestions([]);
+        setIsSuggestionBoxOpen(false);
+    }
+  }, [searchTerm, accessories]);
 
 
   const onSubmit = (data: SearchFormValues) => {
     performSearch(data.searchTerm);
   };
+  
+  const handleSuggestionClick = (suggestion: string) => {
+    form.setValue('searchTerm', suggestion);
+    performSearch(suggestion);
+  }
 
   const handleCategoryChange = (category: string) => {
     setActiveCategory(category);
@@ -145,6 +174,8 @@ export function SearchClient() {
     setResults(null);
     setAiSuggestions(null);
     setHasSearched(false);
+    setSuggestions([]);
+    setIsSuggestionBoxOpen(false);
   }
 
   const formatTimestamp = (timestamp: any) => {
@@ -192,7 +223,8 @@ export function SearchClient() {
         )}
 
         <Card
-          className="mt-4 shadow-lg"
+          ref={searchCardRef}
+          className="mt-4 shadow-lg relative"
           style={{ boxShadow: '0 6px 18px rgba(11, 132, 255, 0.08)' }}
         >
           <CardContent className="p-4 md:p-6">
@@ -212,6 +244,9 @@ export function SearchClient() {
                           placeholder="e.g. Samsung Galaxy S23 Ultra"
                           {...field}
                           disabled={!activeCategory}
+                           onFocus={() => {
+                            if(suggestions.length > 0) setIsSuggestionBoxOpen(true)
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -233,6 +268,21 @@ export function SearchClient() {
               </form>
             </Form>
           </CardContent>
+           {isSuggestionBoxOpen && suggestions.length > 0 && (
+            <div className="absolute top-full left-0 right-0 z-10 mt-1 border bg-background rounded-b-md shadow-lg">
+                <ul>
+                    {suggestions.map((suggestion, index) => (
+                        <li key={index}
+                            className="flex items-center gap-3 px-4 py-3 hover:bg-muted cursor-pointer"
+                            onClick={() => handleSuggestionClick(suggestion)}
+                        >
+                          <Search className="h-4 w-4 text-muted-foreground" />
+                          <span>{suggestion}</span>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+           )}
         </Card>
       </section>
 
