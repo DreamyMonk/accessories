@@ -42,9 +42,13 @@ export function SearchClient() {
   const [hasSearched, setHasSearched] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isSuggestionBoxOpen, setIsSuggestionBoxOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const firestore = useFirestore();
   const searchCardRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const form = useForm<SearchFormValues>({
     resolver: zodResolver(searchSchema),
@@ -190,6 +194,113 @@ export function SearchClient() {
     }
     return 'N/A';
   }
+  
+  const renderCategories = () => {
+    if (!isMounted || categoriesLoading) {
+      return (
+        <div className="flex justify-center w-full space-x-2 pb-4">
+            <Skeleton className="h-10 w-24 rounded-full" />
+            <Skeleton className="h-10 w-32 rounded-full" />
+            <Skeleton className="h-10 w-28 rounded-full" />
+        </div>
+      );
+    }
+
+    return (
+      <ScrollArea className="w-full whitespace-nowrap rounded-md">
+        <div className="flex justify-center w-full space-x-2 pb-4">
+          {categories?.map((category) => (
+            <Button
+              key={category.id}
+              variant={activeCategory === category.name ? 'default' : 'outline'}
+              className="rounded-full transition-all duration-200"
+              onClick={() => handleCategoryChange(category.name)}
+            >
+              {category.name}
+            </Button>
+          ))}
+        </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
+    );
+  }
+
+  const renderResults = () => {
+    if (!isMounted) return null;
+
+    if ((isLoading || accessoriesLoading) && hasSearched) {
+      return (
+        <div className="space-y-4">
+          <Skeleton className="h-48 w-full rounded-lg" />
+          <Skeleton className="h-48 w-full rounded-lg" />
+        </div>
+      );
+    }
+
+    if (!isLoading && results && results.length > 0 && hasSearched) {
+      return (
+         <div className="space-y-4">
+          <h2 className="font-headline text-2xl font-bold">{results.length} Result(s) Found</h2>
+          {results.map((result, i) => (
+            <ResultCard 
+              key={result.id} 
+              result={{...result, lastUpdated: formatTimestamp(result.lastUpdated)}}
+              searchedModel={searchedTerm}
+              index={i} 
+            />
+          ))}
+        </div>
+      );
+    }
+     
+    if (!isLoading && hasSearched && (!results || results.length === 0)) {
+       return (
+        <>
+        {aiSuggestions ? (
+           <Card>
+              <CardContent className="p-6">
+                 <div className="flex items-center gap-2 mb-4">
+                    <Wand2 className="h-6 w-6 text-primary" />
+                    <h3 className="font-headline text-xl font-semibold">No exact matches found. How about these?</h3>
+                 </div>
+                {aiSuggestions.suggestedMatches.length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="font-semibold mb-2">Suggested Matches:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {aiSuggestions.suggestedMatches.map((suggestion, i) => (
+                        <Button key={i} variant="outline" onClick={() => form.setValue('searchTerm', suggestion)}>{suggestion}</Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {aiSuggestions.alternativeSearchTerms.length > 0 && (
+                   <div>
+                    <h4 className="font-semibold mb-2">Alternative Searches:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {aiSuggestions.alternativeSearchTerms.map((term, i) => (
+                         <Button key={i} variant="outline" onClick={() => form.setValue('searchTerm', term)}>{term}</Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {aiSuggestions.recommendFollowUp && (
+                   <p className="mt-4 text-sm text-muted-foreground">Try asking a follow-up question for more help.</p>
+                )}
+              </CardContent>
+           </Card>
+        ) : (
+           <Card>
+            <CardContent className="p-6 text-center">
+              <p className="text-muted-foreground">No accessories found for your search. Try another category or a broader search term.</p>
+            </CardContent>
+          </Card>
+        )}
+        </>
+      );
+    }
+
+    return null;
+  }
 
   return (
     <div className="space-y-8">
@@ -203,30 +314,8 @@ export function SearchClient() {
           </p>
         </div>
 
-        {categoriesLoading ? (
-            <div className="flex justify-center w-full space-x-2 pb-4">
-                <Skeleton className="h-10 w-24 rounded-full" />
-                <Skeleton className="h-10 w-32 rounded-full" />
-                <Skeleton className="h-10 w-28 rounded-full" />
-            </div>
-        ) : (
-        <ScrollArea className="w-full whitespace-nowrap rounded-md">
-          <div className="flex justify-center w-full space-x-2 pb-4">
-            {categories?.map((category) => (
-              <Button
-                key={category.id}
-                variant={activeCategory === category.name ? 'default' : 'outline'}
-                className="rounded-full transition-all duration-200"
-                onClick={() => handleCategoryChange(category.name)}
-              >
-                {category.name}
-              </Button>
-            ))}
-          </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
-        )}
-
+        {renderCategories()}
+        
         <Card
           ref={searchCardRef}
           className="mt-4 shadow-lg relative"
@@ -248,7 +337,7 @@ export function SearchClient() {
                         <Input
                           placeholder="e.g. Samsung Galaxy S23 Ultra"
                           {...field}
-                          disabled={!activeCategory}
+                          disabled={!activeCategory || !isMounted}
                            onFocus={() => {
                             if(suggestions.length > 0) setIsSuggestionBoxOpen(true)
                           }}
@@ -258,7 +347,7 @@ export function SearchClient() {
                     </FormItem>
                   )}
                 />
-                 <Button type="submit" className="w-full text-lg py-6" disabled={isLoading || !activeCategory}>
+                 <Button type="submit" className="w-full text-lg py-6" disabled={isLoading || !activeCategory || !isMounted}>
                   {isLoading ? (
                     <LoaderCircle className="animate-spin" />
                   ) : (
@@ -292,70 +381,7 @@ export function SearchClient() {
       </section>
 
       <section className="min-h-[200px]">
-        {(isLoading || accessoriesLoading) && hasSearched && (
-          <div className="space-y-4">
-            <Skeleton className="h-48 w-full rounded-lg" />
-            <Skeleton className="h-48 w-full rounded-lg" />
-          </div>
-        )}
-        
-        {!isLoading && results && results.length > 0 && hasSearched && (
-           <div className="space-y-4">
-            <h2 className="font-headline text-2xl font-bold">{results.length} Result(s) Found</h2>
-            {results.map((result, i) => (
-              <ResultCard 
-                key={result.id} 
-                result={{...result, lastUpdated: formatTimestamp(result.lastUpdated)}}
-                searchedModel={searchedTerm}
-                index={i} 
-              />
-            ))}
-          </div>
-        )}
-
-        {!isLoading && hasSearched && (!results || results.length === 0) && (
-          <>
-          {aiSuggestions ? (
-             <Card>
-                <CardContent className="p-6">
-                   <div className="flex items-center gap-2 mb-4">
-                      <Wand2 className="h-6 w-6 text-primary" />
-                      <h3 className="font-headline text-xl font-semibold">No exact matches found. How about these?</h3>
-                   </div>
-                  {aiSuggestions.suggestedMatches.length > 0 && (
-                    <div className="mb-4">
-                      <h4 className="font-semibold mb-2">Suggested Matches:</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {aiSuggestions.suggestedMatches.map((suggestion, i) => (
-                          <Button key={i} variant="outline" onClick={() => form.setValue('searchTerm', suggestion)}>{suggestion}</Button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {aiSuggestions.alternativeSearchTerms.length > 0 && (
-                     <div>
-                      <h4 className="font-semibold mb-2">Alternative Searches:</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {aiSuggestions.alternativeSearchTerms.map((term, i) => (
-                           <Button key={i} variant="outline" onClick={() => form.setValue('searchTerm', term)}>{term}</Button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {aiSuggestions.recommendFollowUp && (
-                     <p className="mt-4 text-sm text-muted-foreground">Try asking a follow-up question for more help.</p>
-                  )}
-                </CardContent>
-             </Card>
-          ) : (
-             <Card>
-              <CardContent className="p-6 text-center">
-                <p className="text-muted-foreground">No accessories found for your search. Try another category or a broader search term.</p>
-              </CardContent>
-            </Card>
-          )}
-          </>
-        )}
+        {renderResults()}
       </section>
     </div>
   );
