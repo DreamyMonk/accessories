@@ -91,7 +91,7 @@ export function SearchClient() {
         setIsLoading(false);
         return;
       }
-      
+
       setIsLoading(true);
       setHasSearched(true);
       setResults(null);
@@ -99,32 +99,39 @@ export function SearchClient() {
       setAiSuggestions(null);
       setIsSuggestionBoxOpen(false);
 
-      // A small delay to make the loading feel less jarring
-      await new Promise(resolve => setTimeout(resolve, 300));
+      try {
+        // A small delay to make the loading feel less jarring
+        await new Promise((resolve) => setTimeout(resolve, 300));
 
-      if (currentSearchTerm.length < 1) {
+        if (currentSearchTerm.length < 1) {
+          setResults(null);
+          setHasSearched(false);
+          return;
+        }
+
+        const searchLower = currentSearchTerm.toLowerCase();
+        const filteredResults = accessories.filter(
+          (acc) =>
+            acc.accessoryType === activeCategory &&
+            acc.models &&
+            acc.models.some((m) => m.toLowerCase().includes(searchLower))
+        );
+
+        if (filteredResults.length > 0) {
+          setResults(filteredResults);
+        } else {
+          // If no results, call the AI fuzzy search
+          const suggestions = await fuzzyAccessorySearch({
+            searchTerm: currentSearchTerm,
+          });
+          setAiSuggestions(suggestions);
+        }
+      } catch (error) {
+        console.error("Error during search:", error);
+        // Optionally, set an error state to show in the UI
+      } finally {
         setIsLoading(false);
-        setResults(null);
-        setHasSearched(false);
-        return;
       }
-      
-      const searchLower = currentSearchTerm.toLowerCase();
-      const filteredResults = accessories.filter(
-        (acc) =>
-          acc.accessoryType === activeCategory &&
-          acc.models.some(m => m.toLowerCase().includes(searchLower))
-      );
-      
-      if(filteredResults.length > 0) {
-        setResults(filteredResults);
-      } else {
-        // If no results, call the AI fuzzy search
-        const suggestions = await fuzzyAccessorySearch({ searchTerm: currentSearchTerm });
-        setAiSuggestions(suggestions);
-      }
-
-      setIsLoading(false);
     },
     [accessories, activeCategory]
   );
