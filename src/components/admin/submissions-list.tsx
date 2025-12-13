@@ -60,21 +60,17 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
       return;
     }
       
-    const userRef = doc(firestore, 'users', contribution.submittedBy);
     const contributionRef = doc(firestore, 'contributions', contribution.id);
     
 
     try {
       await runTransaction(firestore, async (transaction) => {
+        const userRef = doc(firestore, 'users', contribution.submittedBy);
         const userDoc = await transaction.get(userRef);
-        if (!userDoc.exists()) {
-          throw new Error("User not found.");
-        }
-        
+
         // This is a new contribution group
         const newAccessoryRef = doc(collection(firestore, "accessories"));
 
-        // 1. Explicitly build the new accessory object to match the schema
         const newAccessoryData = {
           accessoryType: contribution.accessoryType,
           models: contribution.models,
@@ -82,17 +78,20 @@ export function SubmissionsList({ status }: SubmissionsListProps) {
           lastUpdated: serverTimestamp(),
           contributor: {
             uid: contribution.submittedBy,
-            name: userDoc.data().displayName || 'Anonymous',
+            name: userDoc.exists() ? userDoc.data().displayName : 'Admin',
             points: 10, // Assign points for new group
           },
         };
 
-        // 2. Calculate new points for the user
-        const newPoints = (userDoc.data().points || 0) + 10;
-        
-        // 3. Perform all writes in the transaction
+        // Perform all writes in the transaction
         transaction.set(newAccessoryRef, newAccessoryData);
-        transaction.update(userRef, { points: newPoints });
+
+        // Only update points if the user is not an admin
+        if (userDoc.exists()) {
+            const newPoints = (userDoc.data().points || 0) + 10;
+            transaction.update(userRef, { points: newPoints });
+        }
+        
         transaction.update(contributionRef, { status: 'approved' });
       });
 
