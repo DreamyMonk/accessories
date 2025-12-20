@@ -15,6 +15,8 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<FirestoreError | null>(null);
 
+  const refPath = ref?.path;
+
   useEffect(() => {
     if (!ref) {
       setData(null);
@@ -45,7 +47,7 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
     );
 
     return () => unsubscribe();
-  }, [ref]);
+  }, [refPath]);
 
   return { data, loading, error };
 }

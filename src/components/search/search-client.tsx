@@ -111,7 +111,6 @@ export function SearchClient() {
         const searchLower = currentSearchTerm.toLowerCase();
         const filteredResults = accessories.filter(
           (acc) =>
-            acc.accessoryType === activeCategory &&
             acc.models &&
             acc.models.some((m) => m.toLowerCase().includes(searchLower))
         );
@@ -152,7 +151,6 @@ export function SearchClient() {
         const uniqueSuggestions = new Set<string>();
 
         accessories
-          .filter(acc => acc.accessoryType === activeCategory)
           .forEach(acc => {
             if (acc.models && Array.isArray(acc.models)) {
               acc.models.forEach(model => {
@@ -389,5 +387,3 @@ export function SearchClient() {
     </div>
   );
 }
-
-    

@@ -32,7 +32,10 @@ service cloud.firestore {
                     && 'models' in request.resource.data
                     && 'status' in request.resource.data
                     && 'submittedAt' in request.resource.data
-                    && 'submittedBy' in request.resource.data;
+                    && 'submittedBy' in request.resource.data
+                    && 'isNewModel' in request.resource.data
+                    && 'source' in request.resource.data
+                    && 'addToAccessoryId' in request.resource.data;
 
       allow read, update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
