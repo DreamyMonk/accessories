@@ -5,44 +5,42 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Check, X, LoaderCircle } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
-import { approveSubmission, rejectSubmission } from '@/app/admin/submissions/actions';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useFirestore } from '@/firebase';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
-interface Submission {
-    id: string;
-    modelName: string;
-    accessoryType: string;
-    createdAt: string;
-}
-
-export function SubmissionsManager({ initialSubmissions }: { initialSubmissions: Submission[] }) {
-  const [submissions, setSubmissions] = useState<Submission[]>(initialSubmissions);
+export function SubmissionsManager({ initialSubmissions }: { initialSubmissions: any[] }) {
+  const firestore = useFirestore();
+  const [submissions, setSubmissions] = useState<any[]>(initialSubmissions);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleApprove = async (submissionId: string) => {
+  const handleStatusUpdate = async (submissionId: string, status: 'approved' | 'rejected') => {
+    if (!firestore) return;
     setIsProcessing(submissionId);
-    const result = await approveSubmission(submissionId);
-    if (result.success) {
-      setSubmissions(prev => prev.filter(s => s.id !== submissionId));
-      toast({ title: "Submission Approved", description: "The model has been added to the master list." });
-    } else {
-      toast({ title: "Error", description: result.error, variant: "destructive" });
+    try {
+      const ref = doc(firestore, 'contributions', submissionId);
+      await updateDoc(ref, {
+        status,
+        reviewedAt: serverTimestamp()
+      });
+
+      setSubmissions(prev => prev.map(s => s.id === submissionId ? { ...s, status } : s));
+
+      toast({
+        title: `Submission ${status === 'approved' ? 'Approved' : 'Rejected'}`,
+        description: status === 'approved' ? "Contribution accepted." : "Contribution rejected."
+      });
+
+    } catch (error) {
+      console.error("Error updating submission:", error);
+      toast({ title: "Error", description: "Failed to update submission status.", variant: "destructive" });
+    } finally {
+      setIsProcessing(null);
     }
-    setIsProcessing(null);
   };
 
-  const handleReject = async (submissionId: string) => {
-    setIsProcessing(submissionId);
-    const result = await rejectSubmission(submissionId);
-    if (result.success) {
-      setSubmissions(prev => prev.filter(s => s.id !== submissionId));
-      toast({ title: "Submission Rejected", description: "The submission has been removed." });
-    } else {
-      toast({ title: "Error", description: result.error, variant: "destructive" });
-    }
-    setIsProcessing(null);
-  };
+  const pendingSubmissions = submissions.filter(s => s.status === 'pending');
 
   return (
     <Card>
@@ -52,40 +50,53 @@ export function SubmissionsManager({ initialSubmissions }: { initialSubmissions:
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-96 w-full rounded-md border">
-            <div className="p-4">
-                {submissions.length > 0 ? (
-                    <ul className="space-y-2">
-                    {submissions.map(submission => (
-                        <li key={submission.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
-                            <div>
-                                <p className="font-semibold">{submission.modelName}</p>
-                                <p className="text-sm text-muted-foreground">Type: {submission.accessoryType} - Submitted: {new Date(submission.createdAt).toLocaleDateString()}</p>
-                            </div>
-                        <div className="flex gap-2">
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => handleApprove(submission.id)}
-                                disabled={!!isProcessing}
-                            >
-                                {isProcessing === submission.id ? <LoaderCircle className="animate-spin h-4 w-4" /> : <Check className="text-green-500 h-4 w-4" />}
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => handleReject(submission.id)}
-                                disabled={!!isProcessing}
-                            >
-                                 {isProcessing === submission.id ? <LoaderCircle className="animate-spin h-4 w-4" /> : <X className="text-destructive h-4 w-4" />}
-                            </Button>
-                        </div>
-                        </li>
-                    ))}
-                    </ul>
-                ) : (
-                    <p className="text-sm text-center text-muted-foreground p-4">No pending submissions.</p>
-                )}
-            </div>
+          <div className="p-4">
+            {pendingSubmissions.length > 0 ? (
+              <ul className="space-y-2">
+                {pendingSubmissions.map(submission => (
+                  <li key={submission.id} className="flex items-center justify-between p-3 rounded-md bg-muted/50">
+                    <div>
+                      <p className="font-semibold text-lg">{submission.accessoryType}</p>
+                      <p className="text-sm font-medium">Models: {Array.isArray(submission.models) ? submission.models.join(', ') : submission.models}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Submitted: {submission.submittedAt?.toDate ? new Date(submission.submittedAt.toDate()).toLocaleDateString() : 'Unknown'}
+                      </p>
+                      {submission.source && (
+                        <a href={submission.source} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline block mt-1 truncate max-w-[300px]">
+                          {submission.source}
+                        </a>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleStatusUpdate(submission.id, 'approved')}
+                        disabled={!!isProcessing}
+                        className="hover:bg-green-100 hover:text-green-600 dark:hover:bg-green-900/20"
+                      >
+                        {isProcessing === submission.id ? <LoaderCircle className="animate-spin h-4 w-4" /> : <Check className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleStatusUpdate(submission.id, 'rejected')}
+                        disabled={!!isProcessing}
+                        className="hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/20"
+                      >
+                        {isProcessing === submission.id ? <LoaderCircle className="animate-spin h-4 w-4" /> : <X className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <Check className="h-12 w-12 mb-4 opacity-20" />
+                <p>No pending submissions.</p>
+              </div>
+            )}
+          </div>
         </ScrollArea>
       </CardContent>
     </Card>
