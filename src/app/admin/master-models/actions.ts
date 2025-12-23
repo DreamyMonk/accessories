@@ -6,11 +6,11 @@ import Papa from 'papaparse';
 
 const modelsFilePath = path.join(process.cwd(), 'src', 'data', 'master-models.json');
 
-async function readMasterModels(): Promise<string[]> {
+export async function getMasterModels(): Promise<string[]> {
   try {
     const fileContent = await fs.readFile(modelsFilePath, 'utf-8');
     if (!fileContent) {
-        return [];
+      return [];
     }
     return JSON.parse(fileContent);
   } catch (error) {
@@ -21,6 +21,9 @@ async function readMasterModels(): Promise<string[]> {
     throw new Error("Could not read master models file.");
   }
 }
+
+// Keep internal usage consistent if needed, or just replace all calls.
+const readMasterModels = getMasterModels;
 
 async function writeMasterModels(models: string[]): Promise<void> {
   try {
@@ -34,7 +37,7 @@ async function writeMasterModels(models: string[]): Promise<void> {
 export async function addMasterModel(modelName: string): Promise<{ success: boolean; error?: string }> {
   try {
     const models = await readMasterModels();
-    
+
     if (models.includes(modelName)) {
       return { success: false, error: "Model already exists." };
     }
@@ -53,7 +56,7 @@ export async function addMasterModel(modelName: string): Promise<{ success: bool
 export async function deleteMasterModel(modelName: string): Promise<{ success: boolean; error?: string }> {
   try {
     const models = await readMasterModels();
-    
+
     if (!models.includes(modelName)) {
       return { success: false, error: "Model not found." };
     }
@@ -70,31 +73,30 @@ export async function deleteMasterModel(modelName: string): Promise<{ success: b
 }
 
 export async function addMasterModelsFromCsv(csvContent: string): Promise<{ success: boolean; error?: string; addedCount?: number }> {
-    try {
-      const existingModels = await readMasterModels();
-      
-      const parseResult = Papa.parse(csvContent, { header: true });
-  
-      if (parseResult.errors.length > 0) {
-          return { success: false, error: 'Failed to parse CSV file. Please check the format.' };
-      }
-        
-      const newModels = parseResult.data
-          .map((row: any) => row.model?.trim())
-          .filter((model: string | undefined) => model && !existingModels.includes(model));
-  
-      if (newModels.length === 0) {
-        return { success: true, addedCount: 0 };
-      }
-  
-      const updatedModels = [...existingModels, ...newModels].sort();
-      await writeMasterModels(updatedModels);
-  
-      return { success: true, addedCount: newModels.length };
-  
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      return { success: false, error: errorMessage };
+  try {
+    const existingModels = await readMasterModels();
+
+    const parseResult = Papa.parse(csvContent, { header: true });
+
+    if (parseResult.errors.length > 0) {
+      return { success: false, error: 'Failed to parse CSV file. Please check the format.' };
     }
+
+    const newModels = parseResult.data
+      .map((row: any) => row.model?.trim())
+      .filter((model: string | undefined) => model && !existingModels.includes(model));
+
+    if (newModels.length === 0) {
+      return { success: true, addedCount: 0 };
+    }
+
+    const updatedModels = [...existingModels, ...newModels].sort();
+    await writeMasterModels(updatedModels);
+
+    return { success: true, addedCount: newModels.length };
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+    return { success: false, error: errorMessage };
   }
-  
+}
