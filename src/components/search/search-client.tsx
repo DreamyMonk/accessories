@@ -86,8 +86,12 @@ export function SearchClient({ masterModels }: { masterModels: string[] }) {
     useCollection(accessoriesQuery);
 
   const getModelName = (model: any): string => {
+    if (!model) return '';
     if (typeof model === 'string') return model;
-    return model?.name || '';
+    if (typeof model === 'object' && model.name) {
+      return String(model.name);
+    }
+    return '';
   };
 
   const performSearch = useCallback(
@@ -104,7 +108,7 @@ export function SearchClient({ masterModels }: { masterModels: string[] }) {
         setIsLoading(false);
         return;
       }
-      
+
       try {
         await new Promise((resolve) => setTimeout(resolve, 300));
 
@@ -115,19 +119,26 @@ export function SearchClient({ masterModels }: { masterModels: string[] }) {
         }
 
         const searchLower = currentSearchTerm.toLowerCase();
-        const filteredResults = accessories.filter(
-          (acc) =>
-            acc.models &&
-            acc.models.some((m: any) => getModelName(m).toLowerCase().includes(searchLower))
-        );
+
+        // Paranoid filtering
+        const filteredResults = accessories.filter((acc) => {
+          if (!acc.models || !Array.isArray(acc.models)) return false;
+          return acc.models.some((m: any) => {
+            const name = getModelName(m);
+            return name && name.toLowerCase().includes(searchLower);
+          });
+        });
 
         if (filteredResults.length > 0) {
           setResults(filteredResults);
         } else {
-          const suggestions = await fuzzyAccessorySearch({
-            searchTerm: currentSearchTerm,
-          });
-          setAiSuggestions(suggestions);
+          // Only perform fuzzy search if text is meaningful
+          if (currentSearchTerm.trim().length > 2) {
+            const suggestions = await fuzzyAccessorySearch({
+              searchTerm: currentSearchTerm,
+            });
+            setAiSuggestions(suggestions);
+          }
         }
       } catch (error) {
         console.error("Error during search:", error);
@@ -137,7 +148,7 @@ export function SearchClient({ masterModels }: { masterModels: string[] }) {
     },
     [accessories, activeCategory]
   );
-  
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchCardRef.current && !searchCardRef.current.contains(event.target as Node)) {
@@ -153,25 +164,25 @@ export function SearchClient({ masterModels }: { masterModels: string[] }) {
 
   useEffect(() => {
     if (searchTerm && searchTerm.length > 1 && accessories && activeCategory) {
-        const searchLower = searchTerm.toLowerCase();
-        const uniqueSuggestions = new Set<string>();
+      const searchLower = searchTerm.toLowerCase();
+      const uniqueSuggestions = new Set<string>();
 
-        accessories
-          .forEach(acc => {
-            if (acc.models && Array.isArray(acc.models)) {
-              acc.models.forEach((model: any) => {
-                const modelName = getModelName(model);
-                if (modelName.toLowerCase().includes(searchLower)) {
-                    uniqueSuggestions.add(modelName);
-                }
-              });
-            }
+      accessories
+        .forEach(acc => {
+          if (acc.models && Array.isArray(acc.models)) {
+            acc.models.forEach((model: any) => {
+              const modelName = getModelName(model);
+              if (modelName.toLowerCase().includes(searchLower)) {
+                uniqueSuggestions.add(modelName);
+              }
+            });
+          }
         });
-        setSuggestions(Array.from(uniqueSuggestions).slice(0, 10)); // Limit to 10 suggestions
-        setIsSuggestionBoxOpen(uniqueSuggestions.size > 0);
+      setSuggestions(Array.from(uniqueSuggestions).slice(0, 10)); // Limit to 10 suggestions
+      setIsSuggestionBoxOpen(uniqueSuggestions.size > 0);
     } else {
-        setSuggestions([]);
-        setIsSuggestionBoxOpen(false);
+      setSuggestions([]);
+      setIsSuggestionBoxOpen(false);
     }
   }, [searchTerm, accessories, activeCategory]);
 
@@ -179,7 +190,7 @@ export function SearchClient({ masterModels }: { masterModels: string[] }) {
   const onSubmit = (data: SearchFormValues) => {
     performSearch(data.searchTerm);
   };
-  
+
   const handleSuggestionClick = (suggestion: string) => {
     form.setValue('searchTerm', suggestion);
     performSearch(suggestion);
@@ -202,14 +213,14 @@ export function SearchClient({ masterModels }: { masterModels: string[] }) {
     }
     return 'N/A';
   }
-  
+
   const renderCategories = () => {
     if (!isMounted || categoriesLoading) {
       return (
         <div className="flex justify-center w-full space-x-2 pb-4">
-            <Skeleton className="h-10 w-24 rounded-full" />
-            <Skeleton className="h-10 w-32 rounded-full" />
-            <Skeleton className="h-10 w-28 rounded-full" />
+          <Skeleton className="h-10 w-24 rounded-full" />
+          <Skeleton className="h-10 w-32 rounded-full" />
+          <Skeleton className="h-10 w-28 rounded-full" />
         </div>
       );
     }
@@ -247,32 +258,32 @@ export function SearchClient({ masterModels }: { masterModels: string[] }) {
 
     if (!isLoading && results && results.length > 0 && hasSearched) {
       return (
-         <div className="space-y-4">
-            <div className="flex justify-between items-center">
-                <h2 className="font-headline text-2xl font-bold">{results.length} Result(s) Found</h2>
-            </div>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="font-headline text-2xl font-bold">{results.length} Result(s) Found</h2>
+          </div>
           {results.map((result, i) => (
-            <ResultCard 
-              key={result.id} 
-              result={{...result, lastUpdated: formatTimestamp(result.lastUpdated)}}
+            <ResultCard
+              key={result.id}
+              result={{ ...result, lastUpdated: formatTimestamp(result.lastUpdated) }}
               searchedModel={searchedTerm}
-              index={i} 
+              index={i}
             />
           ))}
         </div>
       );
     }
-     
+
     if (!isLoading && hasSearched && (!results || results.length === 0)) {
-       return (
+      return (
         <>
-        {aiSuggestions ? (
-           <Card>
+          {aiSuggestions ? (
+            <Card>
               <CardContent className="p-6">
-                 <div className="flex items-center gap-2 mb-4">
-                    <Wand2 className="h-6 w-6 text-primary" />
-                    <h3 className="font-headline text-xl font-semibold">No exact matches found. How about these?</h3>
-                 </div>
+                <div className="flex items-center gap-2 mb-4">
+                  <Wand2 className="h-6 w-6 text-primary" />
+                  <h3 className="font-headline text-xl font-semibold">No exact matches found. How about these?</h3>
+                </div>
                 {aiSuggestions.suggestedMatches.length > 0 && (
                   <div className="mb-4">
                     <h4 className="font-semibold mb-2">Suggested Matches:</h4>
@@ -284,27 +295,27 @@ export function SearchClient({ masterModels }: { masterModels: string[] }) {
                   </div>
                 )}
                 {aiSuggestions.alternativeSearchTerms.length > 0 && (
-                   <div>
+                  <div>
                     <h4 className="font-semibold mb-2">Alternative Searches:</h4>
                     <div className="flex flex-wrap gap-2">
                       {aiSuggestions.alternativeSearchTerms.map((term, i) => (
-                         <Button key={i} variant="outline" onClick={() => form.setValue('searchTerm', term)}>{term}</Button>
+                        <Button key={i} variant="outline" onClick={() => form.setValue('searchTerm', term)}>{term}</Button>
                       ))}
                     </div>
                   </div>
                 )}
                 {aiSuggestions.recommendFollowUp && (
-                   <p className="mt-4 text-sm text-muted-foreground">Try asking a follow-up question for more help.</p>
+                  <p className="mt-4 text-sm text-muted-foreground">Try asking a follow-up question for more help.</p>
                 )}
               </CardContent>
-           </Card>
-        ) : (
-           <Card>
-            <CardContent className="p-6 text-center space-y-4">
-              <p className="text-muted-foreground">No accessories found for your search. Try another category or a broader search term.</p>
-            </CardContent>
-          </Card>
-        )}
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="p-6 text-center space-y-4">
+                <p className="text-muted-foreground">No accessories found for your search. Try another category or a broader search term.</p>
+              </CardContent>
+            </Card>
+          )}
         </>
       );
     }
@@ -325,7 +336,7 @@ export function SearchClient({ masterModels }: { masterModels: string[] }) {
         </div>
 
         {renderCategories()}
-        
+
         <Card
           ref={searchCardRef}
           className="mt-4 shadow-lg relative"
@@ -348,8 +359,8 @@ export function SearchClient({ masterModels }: { masterModels: string[] }) {
                           placeholder="e.g. Samsung Galaxy S23 Ultra"
                           {...field}
                           disabled={!activeCategory || !isMounted}
-                           onFocus={() => {
-                            if(suggestions.length > 0) setIsSuggestionBoxOpen(true)
+                          onFocus={() => {
+                            if (suggestions.length > 0) setIsSuggestionBoxOpen(true)
                           }}
                         />
                       </FormControl>
@@ -357,7 +368,7 @@ export function SearchClient({ masterModels }: { masterModels: string[] }) {
                     </FormItem>
                   )}
                 />
-                 <Button type="submit" className="w-full text-lg py-6" disabled={isLoading || !activeCategory || !isMounted}>
+                <Button type="submit" className="w-full text-lg py-6" disabled={isLoading || !activeCategory || !isMounted}>
                   {isLoading ? (
                     <LoaderCircle className="animate-spin" />
                   ) : (
@@ -366,27 +377,27 @@ export function SearchClient({ masterModels }: { masterModels: string[] }) {
                     </>
                   )}
                 </Button>
-                 <p className="text-sm text-center text-muted-foreground">
+                <p className="text-sm text-center text-muted-foreground">
                   Enter a model to see auto-suggestions.
                 </p>
               </form>
             </Form>
           </CardContent>
-           {isSuggestionBoxOpen && suggestions.length > 0 && (
+          {isSuggestionBoxOpen && suggestions.length > 0 && (
             <div className="absolute top-full left-0 right-0 z-10 mt-1 border bg-background rounded-b-md shadow-lg">
-                <ul>
-                    {suggestions.map((suggestion, index) => (
-                        <li key={index}
-                            className="flex items-center gap-3 px-4 py-3 hover:bg-muted cursor-pointer"
-                            onClick={() => handleSuggestionClick(suggestion)}
-                        >
-                          <SearchIcon className="h-4 w-4 text-muted-foreground" />
-                          <span>{suggestion}</span>
-                        </li>
-                    ))}
-                </ul>
+              <ul>
+                {suggestions.map((suggestion, index) => (
+                  <li key={index}
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-muted cursor-pointer"
+                    onClick={() => handleSuggestionClick(suggestion)}
+                  >
+                    <SearchIcon className="h-4 w-4 text-muted-foreground" />
+                    <span>{suggestion}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-           )}
+          )}
         </Card>
       </section>
 
