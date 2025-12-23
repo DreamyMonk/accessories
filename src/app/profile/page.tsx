@@ -14,7 +14,7 @@ import { signOut } from 'firebase/auth';
 import { LoaderCircle, LogOut, PlusCircle, FileText, ThumbsUp, Clock, ThumbsDown, X, Check, Settings, User, Activity, Shield } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { doc, setDoc, collection, query, where, orderBy, limit, increment, onSnapshot } from 'firebase/firestore';
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo, useEffect, useState, useRef } from 'react';
 import { useDoc, useCollection } from '@/firebase';
 import Link from 'next/link';
 import { AppLayout } from '@/components/layout/app-layout';
@@ -56,6 +56,7 @@ export default function ProfilePage() {
     // Loading States
     const [isDataLoading, setIsDataLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const isCreatingProfile = useRef(false);
 
     // Social Media State
     const [socialPlatform, setSocialPlatform] = useState('facebook');
@@ -88,6 +89,7 @@ export default function ProfilePage() {
         );
 
         // 3. Set up Listeners
+        // 3. Set up Listeners
         const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
@@ -108,8 +110,14 @@ export default function ProfilePage() {
                 }
             } else {
                 // User document doesn't exist -> Create it
-                setUserData(null);
-                createProfile(user, userDocRef);
+                // Use a flag to prevent infinite loops if creation fails or takes time
+                if (!isCreatingProfile.current) {
+                    isCreatingProfile.current = true;
+                    setUserData(null);
+                    createProfile(user, userDocRef).then(() => {
+                        isCreatingProfile.current = false;
+                    });
+                }
             }
         });
 
