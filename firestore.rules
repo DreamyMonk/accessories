@@ -58,8 +58,7 @@ service cloud.firestore {
       );
 
       allow list: if request.auth != null && (
-        request.query.where.submittedBy == request.auth.uid ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        request.query.where.submittedBy == request.auth.uid
       );
 
       allow update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';

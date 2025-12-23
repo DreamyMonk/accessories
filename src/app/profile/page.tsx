@@ -63,13 +63,13 @@ export default function ProfilePage() {
         if (!firestore || !user?.uid) return null;
         return query(
             collection(firestore, 'contributions'),
-            where('submittedBy', '==', user.uid),
-            orderBy('submittedAt', 'desc'),
-            limit(5)
+            where('submittedBy', '==', user.uid)
+            // orderBy('submittedAt', 'desc'),
+            // limit(5)
         );
     }, [firestore, user?.uid]);
 
-    const { data: contributions, loading: contributionsLoading } = useCollection(contributionsQuery);
+    const { data: contributions, loading: contributionsLoading, error: contributionsError } = useCollection(contributionsQuery);
 
     const allContributionsQuery = useMemo(() => {
         if (!firestore || !user?.uid) return null;
@@ -79,7 +79,7 @@ export default function ProfilePage() {
         );
     }, [firestore, user?.uid]);
 
-    const { data: allContributions, loading: allContributionsLoading } = useCollection(allContributionsQuery);
+    const { data: allContributions, loading: allContributionsLoading, error: allContributionsError } = useCollection(allContributionsQuery);
 
     const stats = useMemo(() => {
         if (!allContributions) return { approved: 0, pending: 0, rejected: 0 };
@@ -168,6 +168,8 @@ export default function ProfilePage() {
         userDataLoading,
         contributionsLoading,
         allContributionsLoading,
+        contributionsError,
+        allContributionsError,
         userUid: user?.uid,
         userData: !!userData,
         firestore: !!firestore
