@@ -13,7 +13,7 @@ import {
 import { signOut } from 'firebase/auth';
 import { LoaderCircle, LogOut, PlusCircle, FileText, ThumbsUp, Clock, ThumbsDown, X, Check, Settings, User, Activity, Shield } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { doc, setDoc, collection, query, where, orderBy, limit, increment, getDocs } from 'firebase/firestore';
+import { doc, setDoc, collection, query, where, orderBy, limit, increment } from 'firebase/firestore';
 import { useMemo, useEffect, useState } from 'react';
 import { useDoc, useCollection } from '@/firebase';
 import Link from 'next/link';
@@ -63,9 +63,9 @@ export default function ProfilePage() {
         if (!firestore || !user?.uid) return null;
         return query(
             collection(firestore, 'contributions'),
-            where('submittedBy', '==', user.uid)
-            // orderBy('submittedAt', 'desc'),
-            // limit(5)
+            where('submittedBy', '==', user.uid),
+            orderBy('submittedAt', 'desc'),
+            limit(5)
         );
     }, [firestore, user?.uid]);
 
@@ -81,20 +81,7 @@ export default function ProfilePage() {
 
     const { data: allContributions, loading: allContributionsLoading, error: allContributionsError } = useCollection(allContributionsQuery);
 
-    useEffect(() => {
-        if (!firestore || !user?.uid) return;
-        console.log("Attempting direct getDocs fetch...");
-        const q = query(
-            collection(firestore, 'contributions'),
-            where('submittedBy', '==', user.uid)
-        );
-        getDocs(q).then(snapshot => {
-            console.log("Direct getDocs success! Count:", snapshot.size);
-            snapshot.docs.forEach(d => console.log("Doc:", d.data()));
-        }).catch(err => {
-            console.error("Direct getDocs failed:", err);
-        });
-    }, [firestore, user?.uid]);
+
 
     const stats = useMemo(() => {
         if (!allContributions) return { approved: 0, pending: 0, rejected: 0 };
