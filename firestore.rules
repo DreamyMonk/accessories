@@ -4,8 +4,12 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     function isNotSuspended(userId) {
+<<<<<<< HEAD
       return !exists(/databases/$(database)/documents/users/$(userId)) || 
              get(/databases/$(database)/documents/users/$(userId)).data.isSuspended != true;
+=======
+      return get(/databases/$(database)/documents/users/$(userId)).data.isSuspended != true;
+>>>>>>> fbc44eec518ddf89dd9fad935fe552e6bfd55d26
     }
 
     // Allow public read access for accessories, but restrict writes.

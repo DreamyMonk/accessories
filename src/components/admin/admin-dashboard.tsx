@@ -1,8 +1,8 @@
 'use client';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SubmissionsTable } from './submissions-table';
-import { MasterModelsTable } from './master-models-table';
+import { SubmissionsManager } from './submissions-manager';
+import { MasterModelManager } from './master-model-manager';
 import { AddNewForm } from './add-new-form';
 import { BulkAddModelsForm } from './bulk-add-models-form';
 import { ManageGroups } from './manage-groups';
@@ -17,10 +17,10 @@ export function AdminDashboard({ masterModels, submissions, models }: { masterMo
         <TabsTrigger value="manage-groups">Manage Groups</TabsTrigger>
       </TabsList>
       <TabsContent value="submissions">
-        <SubmissionsTable submissions={submissions} />
+        <SubmissionsManager initialSubmissions={submissions} />
       </TabsContent>
       <TabsContent value="master-models">
-         <MasterModelsTable models={models} />
+         <MasterModelManager initialModels={masterModels} />
       </TabsContent>
       <TabsContent value="add-new">
         <div className="space-y-6">
