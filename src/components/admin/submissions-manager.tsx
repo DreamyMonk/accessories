@@ -7,7 +7,7 @@ import { Check, X, LoaderCircle, Pencil, Save, Trash2, Clock } from "lucide-reac
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore } from '@/firebase';
-import { doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, serverTimestamp, addDoc, collection, getDoc, increment } from 'firebase/firestore';
 import {
   Dialog,
   DialogContent,
@@ -56,22 +56,56 @@ export function SubmissionsManager({ initialSubmissions }: { initialSubmissions:
     setSubmissions(initialSubmissions);
   }, [initialSubmissions]);
 
-  const handleStatusUpdate = async (submissionId: string, status: 'approved' | 'rejected') => {
+  const handleStatusUpdate = async (submission: any, status: 'approved' | 'rejected') => {
     if (!firestore) return;
-    setIsProcessing(submissionId);
+    setIsProcessing(submission.id);
     try {
-      const ref = doc(firestore, 'contributions', submissionId);
+      if (status === 'approved') {
+        // 1. Fetch user data to populate contributor info
+        let userData: any = { displayName: 'Anonymous', uid: submission.submittedBy };
+        if (submission.submittedBy) {
+          const userRef = doc(firestore, 'users', submission.submittedBy);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            userData = { ...userData, ...userSnap.data() };
+            // Award points!
+            await updateDoc(userRef, { points: increment(10) });
+          }
+        }
+
+        // 2. Prepare Models with attribution
+        const modelsList = Array.isArray(submission.models) ? submission.models : [submission.models];
+        const structuredModels = modelsList.map((m: string) => ({
+          name: m,
+          contributorUid: submission.submittedBy
+        }));
+
+        // 3. Create Accessory Document
+        await addDoc(collection(firestore, 'accessories'), {
+          accessoryType: submission.accessoryType,
+          models: structuredModels,
+          contributor: {
+            uid: userData.uid || 'anonymous',
+            name: userData.displayName || 'Anonymous',
+            points: 0 // This points field in accessory might be redundant if we fetch separate, but good for cache
+          },
+          lastUpdated: serverTimestamp(),
+          source: submission.source || ''
+        });
+      }
+
+      const ref = doc(firestore, 'contributions', submission.id);
       await updateDoc(ref, {
         status,
         reviewedAt: serverTimestamp()
       });
 
       // Optimistic update
-      setSubmissions(prev => prev.map(s => s.id === submissionId ? { ...s, status } : s));
+      setSubmissions(prev => prev.map(s => s.id === submission.id ? { ...s, status } : s));
 
       toast({
         title: `Submission ${status === 'approved' ? 'Approved' : 'Rejected'}`,
-        description: status === 'approved' ? "Contribution accepted." : "Contribution rejected."
+        description: status === 'approved' ? "Contribution published to live site." : "Contribution rejected."
       });
 
     } catch (error) {
@@ -182,7 +216,7 @@ export function SubmissionsManager({ initialSubmissions }: { initialSubmissions:
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => handleStatusUpdate(submission.id, 'approved')}
+                    onClick={() => handleStatusUpdate(submission, 'approved')}
                     disabled={!!isProcessing}
                     className="h-8 w-8 border-green-200 hover:bg-green-100 hover:text-green-600 dark:border-green-800 dark:hover:bg-green-900/30"
                     title="Approve"
@@ -192,7 +226,7 @@ export function SubmissionsManager({ initialSubmissions }: { initialSubmissions:
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => handleStatusUpdate(submission.id, 'rejected')}
+                    onClick={() => handleStatusUpdate(submission, 'rejected')}
                     disabled={!!isProcessing}
                     className="h-8 w-8 border-red-200 hover:bg-red-100 hover:text-red-600 dark:border-red-800 dark:hover:bg-red-900/30"
                     title="Reject"
