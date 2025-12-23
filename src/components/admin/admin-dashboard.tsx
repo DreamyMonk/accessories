@@ -7,7 +7,6 @@ import { SubmissionsManager } from './submissions-manager';
 import { MasterModelManager } from './master-model-manager';
 import { AddNewForm } from './add-new-form';
 import { BulkAddModelsForm } from './bulk-add-models-form';
-import { ManageGroups } from './manage-groups';
 import { CategoryManager } from './category-manager';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Archive, CheckCircle, Clock, Database, FileText, LayoutGrid, Plus, Smartphone, Users, Tag } from "lucide-react";
@@ -27,13 +26,12 @@ export function AdminDashboard({ masterModels, submissions, models }: { masterMo
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-      <TabsList className="grid w-full grid-cols-6 p-1 bg-muted/50 rounded-xl">
+      <TabsList className="grid w-full grid-cols-5 p-1 bg-muted/50 rounded-xl">
         <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Overview</TabsTrigger>
         <TabsTrigger value="submissions" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Submissions</TabsTrigger>
         <TabsTrigger value="master-models" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Master Models</TabsTrigger>
         <TabsTrigger value="add-new" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Add Data</TabsTrigger>
         <TabsTrigger value="categories" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Categories</TabsTrigger>
-        <TabsTrigger value="manage-groups" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Groups</TabsTrigger>
       </TabsList>
 
       <TabsContent value="overview" className="space-y-6">
@@ -82,13 +80,13 @@ export function AdminDashboard({ masterModels, submissions, models }: { masterMo
         </div>
 
         {/* Quick Actions */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
           <Card className="col-span-4 shadow-sm">
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
               <CardDescription>Common tasks you perform often.</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-4 grid-cols-2">
+            <CardContent className="grid gap-4 grid-cols-2 lg:grid-cols-3">
               <Button
                 variant="outline"
                 className="h-24 flex flex-col gap-2 hover:bg-muted/50 border-dashed border-2"
@@ -113,17 +111,9 @@ export function AdminDashboard({ masterModels, submissions, models }: { masterMo
                 <Tag className="h-6 w-6" />
                 Manage Categories
               </Button>
-              <Button
-                variant="outline"
-                className="h-24 flex flex-col gap-2 hover:bg-muted/50 border-dashed border-2"
-                onClick={() => setActiveTab("manage-groups")}
-              >
-                <LayoutGrid className="h-6 w-6" />
-                Manage Groups
-              </Button>
             </CardContent>
           </Card>
-          <Card className="col-span-3 shadow-sm bg-gradient-to-br from-primary/5 to-background border-primary/20">
+          <Card className="col-span-2 shadow-sm bg-gradient-to-br from-primary/5 to-background border-primary/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Activity className="h-5 w-5 text-primary" />
@@ -175,9 +165,6 @@ export function AdminDashboard({ masterModels, submissions, models }: { masterMo
         <CategoryManager />
       </TabsContent>
 
-      <TabsContent value="manage-groups">
-        <ManageGroups accessories={models} />
-      </TabsContent>
     </Tabs>
   );
 }
