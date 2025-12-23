@@ -22,10 +22,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '../ui/card';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
-import type { Accessory } from '@/lib/types';
+import type { Accessory, ModelContribution } from '@/lib/types';
 import { format } from 'date-fns';
 import { fuzzyAccessorySearch, FuzzyAccessorySearchOutput } from '@/ai/flows/fuzzy-accessory-search';
 import { cn } from '@/lib/utils';
+import { ContributeDialog } from '../contribute-dialog';
 
 const searchSchema = z.object({
   searchTerm: z.string(),
@@ -33,7 +34,7 @@ const searchSchema = z.object({
 
 type SearchFormValues = z.infer<typeof searchSchema>;
 
-export function SearchClient() {
+export function SearchClient({ masterModels }: { masterModels: string[] }) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<Accessory[] | null>(null);
@@ -84,6 +85,11 @@ export function SearchClient() {
   const { data: accessories, loading: accessoriesLoading } =
     useCollection(accessoriesQuery);
 
+  const getModelName = (model: any): string => {
+    if (typeof model === 'string') return model;
+    return model?.name || '';
+  };
+
   const performSearch = useCallback(
     async (currentSearchTerm: string) => {
       setIsLoading(true);
@@ -112,7 +118,7 @@ export function SearchClient() {
         const filteredResults = accessories.filter(
           (acc) =>
             acc.models &&
-            acc.models.some((m) => m.toLowerCase().includes(searchLower))
+            acc.models.some((m: any) => getModelName(m).toLowerCase().includes(searchLower))
         );
 
         if (filteredResults.length > 0) {
@@ -153,9 +159,10 @@ export function SearchClient() {
         accessories
           .forEach(acc => {
             if (acc.models && Array.isArray(acc.models)) {
-              acc.models.forEach(model => {
-                if (model.toLowerCase().includes(searchLower)) {
-                    uniqueSuggestions.add(model);
+              acc.models.forEach((model: any) => {
+                const modelName = getModelName(model);
+                if (modelName.toLowerCase().includes(searchLower)) {
+                    uniqueSuggestions.add(modelName);
                 }
               });
             }
@@ -241,7 +248,9 @@ export function SearchClient() {
     if (!isLoading && results && results.length > 0 && hasSearched) {
       return (
          <div className="space-y-4">
-          <h2 className="font-headline text-2xl font-bold">{results.length} Result(s) Found</h2>
+            <div className="flex justify-between items-center">
+                <h2 className="font-headline text-2xl font-bold">{results.length} Result(s) Found</h2>
+            </div>
           {results.map((result, i) => (
             <ResultCard 
               key={result.id} 
@@ -291,7 +300,7 @@ export function SearchClient() {
            </Card>
         ) : (
            <Card>
-            <CardContent className="p-6 text-center">
+            <CardContent className="p-6 text-center space-y-4">
               <p className="text-muted-foreground">No accessories found for your search. Try another category or a broader search term.</p>
             </CardContent>
           </Card>
@@ -307,7 +316,7 @@ export function SearchClient() {
     <div className="space-y-8">
       <section id="search" className="scroll-mt-20">
         <div className="text-center mb-8">
-          <h1 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
+          <h1 className="font-headline text-3xl md:t ext-4xl font-bold tracking-tight">
             Accessory Compatibility Finder
           </h1>
           <p className="text-muted-foreground mt-2">
