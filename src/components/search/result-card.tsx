@@ -18,8 +18,12 @@ export function ResultCard({ result, searchedModel, index }: { result: any, sear
   const { toast } = useToast();
 
   const getModelName = (model: any): string => {
+    if (!model) return '';
     if (typeof model === 'string') return model;
-    return model?.name || '';
+    if (typeof model === 'object' && model.name) {
+      return String(model.name);
+    }
+    return '';
   }
 
   const getContributorUid = (model: any): string | undefined => {
@@ -30,9 +34,9 @@ export function ResultCard({ result, searchedModel, index }: { result: any, sear
   const mainModelObj = result.models.find((m: any) => getModelName(m).toLowerCase() === searchedModel.toLowerCase());
   const mainModelName = mainModelObj ? getModelName(mainModelObj) : searchedModel;
   const mainModelContributor = mainModelObj ? getContributorUid(mainModelObj) : result.contributor.uid;
-  
+
   const otherModels = result.models.filter((m: any) => getModelName(m).toLowerCase() !== searchedModel.toLowerCase());
-  
+
   const topItems = otherModels.slice(0, 5);
   const remainingItems = otherModels.slice(5);
 
@@ -57,7 +61,7 @@ export function ResultCard({ result, searchedModel, index }: { result: any, sear
             <ContributorInfo uid={mainModelContributor} variant="compact" />
           </div>
           <div className="flex items-center gap-2 mt-1">
-             <Badge variant="secondary">{result.accessoryType}</Badge>
+            <Badge variant="secondary">{result.accessoryType}</Badge>
           </div>
         </div>
       </CardHeader>
@@ -88,18 +92,18 @@ export function ResultCard({ result, searchedModel, index }: { result: any, sear
             )}
           </>
         ) : (
-            <p className="text-sm text-muted-foreground">No other compatible models have been added for this group yet.</p>
+          <p className="text-sm text-muted-foreground">No other compatible models have been added for this group yet.</p>
         )}
       </CardContent>
       <Separator className="my-4" />
       <CardFooter className="flex-col items-start gap-4">
         <div className="w-full grid grid-cols-2 gap-2">
-            <Button variant="secondary" onClick={handleCopy}><Copy className="mr-2 h-4 w-4" /> Copy List</Button>
-            <Button variant="outline" onClick={() => setIsDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> Contribute</Button>
+          <Button variant="secondary" onClick={handleCopy}><Copy className="mr-2 h-4 w-4" /> Copy List</Button>
+          <Button variant="outline" onClick={() => setIsDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> Contribute</Button>
         </div>
         <Separator className="my-4" />
-         <ContributorInfo uid={result.contributor?.uid} points={result.contributor?.points} />
-         <ContributeToGroupDialog result={result} open={isDialogOpen} onOpenChange={setIsDialogOpen} />
+        <ContributorInfo uid={result.contributor?.uid} points={result.contributor?.points} />
+        <ContributeToGroupDialog result={result} open={isDialogOpen} onOpenChange={setIsDialogOpen} />
       </CardFooter>
     </Card>
   );
