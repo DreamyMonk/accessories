@@ -1,19 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { SearchClient } from '@/components/search/search-client';
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, LoaderCircle, CheckCircle2 } from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Combobox } from '@/components/ui/combobox';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from 'next/link';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function ContributionFlow({ masterModels }: { masterModels: string[] }) {
     const [activeTab, setActiveTab] = useState("existing");
@@ -24,6 +24,17 @@ export function ContributionFlow({ masterModels }: { masterModels: string[] }) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [successId, setSuccessId] = useState<string | null>(null);
+    const [categories, setCategories] = useState<any[]>([]);
+
+    // Fetch Categories
+    useEffect(() => {
+        if (!firestore) return;
+        const q = query(collection(firestore, "categories"), orderBy("name", "asc"));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setCategories(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+        return () => unsubscribe();
+    }, [firestore]);
 
     const handleAddInput = () => {
         setInputs([...inputs, '']);
@@ -50,8 +61,8 @@ export function ContributionFlow({ masterModels }: { masterModels: string[] }) {
 
         const validModels = inputs.map(m => m.trim()).filter(Boolean);
 
-        if (!accessoryType.trim()) {
-            toast({ title: "Missing Information", description: "Please enter an accessory type.", variant: "destructive" });
+        if (!accessoryType) {
+            toast({ title: "Missing Information", description: "Please select an accessory category.", variant: "destructive" });
             return;
         }
 
@@ -63,7 +74,7 @@ export function ContributionFlow({ masterModels }: { masterModels: string[] }) {
         setIsSubmitting(true);
         try {
             const docRef = await addDoc(collection(firestore, 'contributions'), {
-                accessoryType: accessoryType.trim(),
+                accessoryType: accessoryType,
                 models: validModels,
                 submittedBy: user.uid,
                 submittedAt: serverTimestamp(),
@@ -129,12 +140,18 @@ export function ContributionFlow({ masterModels }: { masterModels: string[] }) {
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <div className="space-y-2">
-                            <Label>Accessory Type</Label>
-                            <Input
-                                placeholder="e.g. Tempered Glass, Back Case, Camera Lens..."
-                                value={accessoryType}
-                                onChange={(e) => setAccessoryType(e.target.value)}
-                            />
+                            <Label>Accessory Category</Label>
+                            <Select value={accessoryType} onValueChange={setAccessoryType}>
+                                <SelectTrigger className="bg-background">
+                                    <SelectValue placeholder="Select Category..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {categories.map(cat => (
+                                        <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                                    ))}
+                                    {categories.length === 0 && <SelectItem value="none" disabled>No categories available</SelectItem>}
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         <div className="space-y-4">

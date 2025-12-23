@@ -1,30 +1,42 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, LoaderCircle } from "lucide-react";
+import { Search, Plus, LoaderCircle, Trash2 } from "lucide-react";
 import { useFirestore } from '@/firebase';
-import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, orderBy, onSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { AdminResultCard } from './admin-result-card';
-import { Textarea } from "@/components/ui/textarea"; // Assuming Textarea exists, otherwise Input
 import { Label } from "@/components/ui/label";
 import { addMasterModel } from '@/app/admin/master-models/actions';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 
 export function AddNewForm({ masterModels }: { masterModels: string[] }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState<any[] | null>(null);
+    const [categories, setCategories] = useState<any[]>([]);
 
     // New Chain States
     const [newChainType, setNewChainType] = useState('');
-    const [newChainModels, setNewChainModels] = useState('');
+    const [chainRows, setChainRows] = useState<{ model: string, contributorName: string }[]>([{ model: '', contributorName: '' }, { model: '', contributorName: '' }]); // Start with 2 rows
     const [creatingChain, setCreatingChain] = useState(false);
 
     const firestore = useFirestore();
     const { toast } = useToast();
+
+    // Fetch Categories
+    useEffect(() => {
+        if (!firestore) return;
+        const q = query(collection(firestore, "categories"), orderBy("name", "asc"));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setCategories(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+        return () => unsubscribe();
+    }, [firestore]);
 
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -70,28 +82,50 @@ export function AddNewForm({ masterModels }: { masterModels: string[] }) {
         setLoading(false);
     };
 
+    const handleChainRowChange = (index: number, field: 'model' | 'contributorName', value: string) => {
+        const newRows = [...chainRows];
+        newRows[index] = { ...newRows[index], [field]: value };
+        setChainRows(newRows);
+    };
+
+    const addChainRow = () => {
+        setChainRows([...chainRows, { model: '', contributorName: '' }]);
+    };
+
+    const removeChainRow = (index: number) => {
+        const newRows = [...chainRows];
+        newRows.splice(index, 1);
+        setChainRows(newRows);
+    };
+
     const handleCreateChain = async () => {
-        if (!firestore || !newChainType.trim() || !newChainModels.trim()) {
-            toast({ title: "Missing fields", description: "Please fill in all fields.", variant: "destructive" });
+        if (!firestore || !newChainType) {
+            toast({ title: "Missing fields", description: "Please select a category.", variant: "destructive" });
+            return;
+        }
+
+        const validRows = chainRows.filter(r => r.model.trim() !== '');
+        if (validRows.length < 2) {
+            toast({ title: "Not enough models", description: "Please add at least 2 models to create a chain.", variant: "destructive" });
             return;
         }
 
         setCreatingChain(true);
         try {
-            const modelsList = newChainModels.split(',').map(m => m.trim()).filter(Boolean);
-
-            // Add to master models
+            // Add to master models if new
+            const modelsList = validRows.map(r => r.model.trim());
             for (const m of modelsList) {
                 await addMasterModel(m);
             }
 
-            const structuredModels = modelsList.map(m => ({
-                name: m,
-                contributorUid: 'admin' // Admin created
+            const structuredModels = validRows.map(r => ({
+                name: r.model.trim(),
+                contributorUid: 'admin',
+                contributorName: r.contributorName.trim() || undefined // Optional custom name
             }));
 
             await addDoc(collection(firestore, 'accessories'), {
-                accessoryType: newChainType.trim(),
+                accessoryType: newChainType,
                 models: structuredModels,
                 contributor: {
                     uid: 'admin',
@@ -104,7 +138,7 @@ export function AddNewForm({ masterModels }: { masterModels: string[] }) {
 
             toast({ title: "Success", description: "New compatibility chain created." });
             setNewChainType('');
-            setNewChainModels('');
+            setChainRows([{ model: '', contributorName: '' }, { model: '', contributorName: '' }]);
 
         } catch (error) {
             console.error("Error creating chain:", error);
@@ -124,28 +158,64 @@ export function AddNewForm({ masterModels }: { masterModels: string[] }) {
                         Create New Compatibility Chain
                     </CardTitle>
                     <CardDescription>
-                        Start a fresh group of compatible models (e.g., "Screen A" fits iPhone 11, 12, Vivo V6).
+                        Start a fresh group of compatible models. Select a category and add models.
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
                     <div className="grid gap-2">
-                        <Label>Accessory Type</Label>
-                        <Input
-                            placeholder="e.g. Tempered Glass, Back Case, Camera Lens..."
-                            value={newChainType}
-                            onChange={(e) => setNewChainType(e.target.value)}
-                        />
+                        <Label>Accessory Category</Label>
+                        <Select value={newChainType} onValueChange={setNewChainType}>
+                            <SelectTrigger className="bg-background">
+                                <SelectValue placeholder="Select Category..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {categories.map(cat => (
+                                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                                ))}
+                                {categories.length === 0 && <SelectItem value="none" disabled>No categories created</SelectItem>}
+                            </SelectContent>
+                        </Select>
                     </div>
-                    <div className="grid gap-2">
+
+                    <div className="space-y-3">
                         <Label>Compatible Models</Label>
-                        <Textarea
-                            placeholder="Enter models separated by commas (e.g. iPhone 11, iPhone 12, Vivo V6)"
-                            value={newChainModels}
-                            onChange={(e) => setNewChainModels(e.target.value)}
-                        />
-                        <p className="text-xs text-muted-foreground">These models will be linked together as fully compatible with this accessory.</p>
+                        <p className="text-xs text-muted-foreground mb-2">
+                            Search for models from the Master List. If you type a new model, it will be added to the Master List automatically.
+                            Optionally add a "Contributor Name" if you are importing data from a known source.
+                        </p>
+
+                        {chainRows.map((row, index) => (
+                            <div key={index} className="flex gap-2 items-start">
+                                <div className="flex-1 space-y-1">
+                                    <Combobox
+                                        items={masterModels.map(m => ({ label: m, value: m }))}
+                                        value={row.model}
+                                        onChange={(val) => handleChainRowChange(index, "model", val)}
+                                        placeholder="Model Name (e.g. iPhone 13)"
+                                        creatable
+                                    />
+                                </div>
+                                <div className="w-1/3">
+                                    <Input
+                                        placeholder="Contributor (Optional)"
+                                        value={row.contributorName}
+                                        onChange={(e) => handleChainRowChange(index, "contributorName", e.target.value)}
+                                    />
+                                </div>
+                                {chainRows.length > 1 && (
+                                    <Button variant="ghost" size="icon" onClick={() => removeChainRow(index)} className="text-destructive hover:bg-destructive/10">
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                )}
+                            </div>
+                        ))}
+
+                        <Button variant="outline" size="sm" onClick={addChainRow} className="w-full border-dashed">
+                            <Plus className="h-4 w-4 mr-2" /> Add Another Model
+                        </Button>
                     </div>
-                    <Button onClick={handleCreateChain} disabled={creatingChain} className="w-full">
+
+                    <Button onClick={handleCreateChain} disabled={creatingChain} className="w-full py-6">
                         {creatingChain ? <LoaderCircle className="animate-spin mr-2" /> : <Plus className="mr-2 h-4 w-4" />}
                         Create Chain
                     </Button>

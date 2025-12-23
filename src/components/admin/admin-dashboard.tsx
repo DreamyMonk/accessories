@@ -8,8 +8,9 @@ import { MasterModelManager } from './master-model-manager';
 import { AddNewForm } from './add-new-form';
 import { BulkAddModelsForm } from './bulk-add-models-form';
 import { ManageGroups } from './manage-groups';
+import { CategoryManager } from './category-manager';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity, Archive, CheckCircle, Clock, Database, FileText, LayoutGrid, Plus, Smartphone, Users } from "lucide-react";
+import { Activity, Archive, CheckCircle, Clock, Database, FileText, LayoutGrid, Plus, Smartphone, Users, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function AdminDashboard({ masterModels, submissions, models }: { masterModels: string[], submissions: any[], models: any[] }) {
@@ -26,11 +27,12 @@ export function AdminDashboard({ masterModels, submissions, models }: { masterMo
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-      <TabsList className="grid w-full grid-cols-5 p-1 bg-muted/50 rounded-xl">
+      <TabsList className="grid w-full grid-cols-6 p-1 bg-muted/50 rounded-xl">
         <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Overview</TabsTrigger>
         <TabsTrigger value="submissions" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Submissions</TabsTrigger>
         <TabsTrigger value="master-models" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Master Models</TabsTrigger>
         <TabsTrigger value="add-new" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Add Data</TabsTrigger>
+        <TabsTrigger value="categories" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Categories</TabsTrigger>
         <TabsTrigger value="manage-groups" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Groups</TabsTrigger>
       </TabsList>
 
@@ -106,10 +108,10 @@ export function AdminDashboard({ masterModels, submissions, models }: { masterMo
               <Button
                 variant="outline"
                 className="h-24 flex flex-col gap-2 hover:bg-muted/50 border-dashed border-2"
-                onClick={() => setActiveTab("master-models")}
+                onClick={() => setActiveTab("categories")}
               >
-                <Database className="h-6 w-6" />
-                Manage Master List
+                <Tag className="h-6 w-6" />
+                Manage Categories
               </Button>
               <Button
                 variant="outline"
@@ -167,6 +169,10 @@ export function AdminDashboard({ masterModels, submissions, models }: { masterMo
           <AddNewForm masterModels={masterModels} />
           <BulkAddModelsForm />
         </div>
+      </TabsContent>
+
+      <TabsContent value="categories">
+        <CategoryManager />
       </TabsContent>
 
       <TabsContent value="manage-groups">

@@ -1,184 +1,120 @@
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import * as z from 'zod';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
-import { addDoc, collection, query, orderBy, serverTimestamp, doc, deleteDoc } from 'firebase/firestore';
-import { useFirestore, useCollection } from '@/firebase';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
-import { Badge } from '../ui/badge';
-import { Skeleton } from '../ui/skeleton';
-import { useMemo, useState } from 'react';
-import { X } from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-
-
-const categorySchema = z.object({
-  name: z.string().min(3, 'Category name must be at least 3 characters.'),
-});
-
-type CategoryFormValues = z.infer<typeof categorySchema>;
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useFirestore } from "@/firebase";
+import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "firebase/firestore";
+import { Trash2, Plus, LoaderCircle, Tag } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export function CategoryManager() {
-  const { toast } = useToast();
+  const [categories, setCategories] = useState<any[]>([]);
+  const [newCategory, setNewCategory] = useState("");
+  const [loading, setLoading] = useState(false);
   const firestore = useFirestore();
-  const [categoryToDelete, setCategoryToDelete] = useState<{id: string, name: string} | null>(null);
+  const { toast } = useToast();
 
-  const categoriesQuery = useMemo(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'categories'), orderBy('name', 'asc'));
+  useEffect(() => {
+    if (!firestore) return;
+
+    const q = query(collection(firestore, "categories"), orderBy("name", "asc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const cats = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setCategories(cats);
+    });
+
+    return () => unsubscribe();
   }, [firestore]);
 
-  const { data: categories, loading: categoriesLoading } = useCollection(categoriesQuery);
-
-  const form = useForm<CategoryFormValues>({
-    resolver: zodResolver(categorySchema),
-    defaultValues: { name: '' },
-  });
-
-  const onSubmit = async (data: CategoryFormValues) => {
+  const handleAddCategory = async () => {
+    if (!newCategory.trim()) return;
     if (!firestore) return;
 
-    const categoryData = {
-      name: data.name,
-      createdAt: serverTimestamp(),
-    };
-    
-    const categoryCollectionRef = collection(firestore, 'categories');
+    // Check for duplicate
+    if (categories.some(c => c.name.toLowerCase() === newCategory.trim().toLowerCase())) {
+      toast({ title: "Duplicate", description: "This category already exists.", variant: "destructive" });
+      return;
+    }
 
-    addDoc(categoryCollectionRef, categoryData)
-      .then(() => {
-        toast({
-          title: 'Category Added!',
-          description: `${data.name} has been added.`,
-        });
-        form.reset();
-      })
-      .catch(() => {
-        const permissionError = new FirestorePermissionError({
-          path: categoryCollectionRef.path,
-          operation: 'create',
-          requestResourceData: categoryData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-
-        toast({
-          title: 'Failed to Add Category',
-          description: 'Please check your permissions.',
-          variant: 'destructive',
-        });
+    setLoading(true);
+    try {
+      await addDoc(collection(firestore, "categories"), {
+        name: newCategory.trim(),
+        createdAt: serverTimestamp()
       });
+      setNewCategory("");
+      toast({ title: "Success", description: "Category added." });
+    } catch (error) {
+      console.error("Error adding category:", error);
+      toast({ title: "Error", description: "Failed to add category.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = async (categoryId: string) => {
+  const handleDeleteCategory = async (id: string) => {
     if (!firestore) return;
-    const categoryDocRef = doc(firestore, 'categories', categoryId);
+    if (!confirm("Are you sure? This will remove the category from the selection list.")) return;
 
-    deleteDoc(categoryDocRef)
-      .then(() => {
-        toast({
-          title: 'Category Deleted',
-          description: 'The category has been removed.',
-        });
-      })
-      .catch(() => {
-        const permissionError = new FirestorePermissionError({
-          path: categoryDocRef.path,
-          operation: 'delete',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-
-        toast({
-          title: 'Failed to Delete',
-          description: 'Could not delete category. Check permissions.',
-          variant: 'destructive',
-        });
-      });
-  }
+    try {
+      await deleteDoc(doc(firestore, "categories", id));
+      toast({ title: "Deleted", description: "Category removed." });
+    } catch (error) {
+      console.error("Error deleting category:", error);
+      toast({ title: "Error", description: "Failed to delete category.", variant: "destructive" });
+    }
+  };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Manage Categories</CardTitle>
-        <CardDescription>Add or remove accessory categories.</CardDescription>
+        <CardTitle className="flex items-center gap-2">
+          <Tag className="h-5 w-5" />
+          Manage Categories
+        </CardTitle>
+        <CardDescription>
+          Define the accessory types available for selection (e.g. Tempered Glass, Back Case).
+        </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="mb-6">
-            <h4 className="font-medium mb-2">Existing Categories</h4>
-            <div className="flex flex-wrap gap-2">
-                {categoriesLoading && <Skeleton className="w-full h-8" />}
-                {categories && categories.length > 0 ? (
-                    <AlertDialog>
-                        {categories.map(cat => (
-                            <Badge key={cat.id} variant="secondary" className="group relative pr-6">
-                                {cat.name}
-                                <AlertDialogTrigger asChild>
-                                    <button 
-                                        onClick={() => setCategoryToDelete(cat)}
-                                        className="absolute right-0.5 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-muted-foreground opacity-50 transition-opacity hover:opacity-100 group-hover:opacity-100"
-                                    >
-                                        <X className="h-3 w-3" />
-                                        <span className="sr-only">Delete category</span>
-                                    </button>
-                                </AlertDialogTrigger>
-                            </Badge>
-                        ))}
-                         <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete the 
-                                    <span className="font-semibold"> "{categoryToDelete?.name}"</span> category.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => categoryToDelete && handleDelete(categoryToDelete.id)}>
-                                    Continue
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                ) : <p className="text-sm text-muted-foreground">No categories yet.</p>}
-            </div>
+      <CardContent className="space-y-6">
+        <div className="flex gap-2">
+          <Input
+            placeholder="New Category Name..."
+            value={newCategory}
+            onChange={(e) => setNewCategory(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+          />
+          <Button onClick={handleAddCategory} disabled={loading || !newCategory.trim()}>
+            {loading ? <LoaderCircle className="animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+            Add
+          </Button>
         </div>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>New Category Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Screen Protectors" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? 'Adding...' : 'Add Category'}
-            </Button>
-          </form>
-        </Form>
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {categories.map((cat) => (
+            <div key={cat.id} className="flex items-center justify-between p-3 rounded-md bg-muted/50 border">
+              <span className="font-medium">{cat.name}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                onClick={() => handleDeleteCategory(cat.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+          {categories.length === 0 && (
+            <p className="col-span-full text-center text-muted-foreground py-8">
+              No categories found. Add one above.
+            </p>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
