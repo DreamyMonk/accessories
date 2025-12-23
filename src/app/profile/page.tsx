@@ -13,7 +13,7 @@ import {
 import { signOut } from 'firebase/auth';
 import { LoaderCircle, LogOut, PlusCircle, FileText, ThumbsUp, Clock, ThumbsDown, X, Check, Settings, User, Activity, Shield } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { doc, setDoc, collection, query, where, orderBy, limit, increment } from 'firebase/firestore';
+import { doc, setDoc, collection, query, where, orderBy, limit, increment, onSnapshot } from 'firebase/firestore';
 import { useMemo, useEffect, useState } from 'react';
 import { useDoc, useCollection } from '@/firebase';
 import Link from 'next/link';
@@ -45,59 +45,100 @@ const statusConfig = {
 export default function ProfilePage() {
     const auth = useAuth();
     const firestore = useFirestore();
-    const { user, loading: userLoading } = useUser();
+    const { user, loading: userAuthLoading } = useUser();
     const { toast } = useToast();
 
-    const [socialPlatform, setSocialPlatform] = useState('facebook');
-    const [socialHandle, setSocialHandle] = useState('');
+    // Consolidated State
+    const [userData, setUserData] = useState<any>(null);
+    const [contributions, setContributions] = useState<any[]>([]);
+    const [allContributions, setAllContributions] = useState<any[]>([]);
+
+    // Loading States
+    const [isDataLoading, setIsDataLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
 
-    const userRef = useMemo(() => {
-        if (!user?.uid || !firestore) return null;
-        return doc(firestore, 'users', user.uid);
-    }, [user?.uid, firestore]);
+    // Social Media State
+    const [socialPlatform, setSocialPlatform] = useState('facebook');
+    const [socialHandle, setSocialHandle] = useState('');
 
-    const { data: userData, loading: userDataLoading, error: userDataError } = useDoc(userRef);
+    // --- Main Data Fetching Effect ---
+    useEffect(() => {
+        // 1. Wait for Auth and Firestore
+        if (userAuthLoading) return;
+        if (!firestore || !user) {
+            setIsDataLoading(false);
+            return;
+        }
 
-    const contributionsQuery = useMemo(() => {
-        if (!firestore || !user?.uid) return null;
-        return query(
+        setIsDataLoading(true);
+
+        const userDocRef = doc(firestore, 'users', user.uid);
+
+        // 2. Contributions Queries
+        const recentQuery = query(
             collection(firestore, 'contributions'),
             where('submittedBy', '==', user.uid),
             orderBy('submittedAt', 'desc'),
             limit(5)
         );
-    }, [firestore, user?.uid]);
 
-    const { data: contributions, loading: contributionsLoading, error: contributionsError } = useCollection(contributionsQuery);
-
-    const allContributionsQuery = useMemo(() => {
-        if (!firestore || !user?.uid) return null;
-        return query(
+        const allQuery = query(
             collection(firestore, 'contributions'),
-            where('submittedBy', '==', user.uid),
+            where('submittedBy', '==', user.uid)
         );
-    }, [firestore, user?.uid]);
 
-    const { data: allContributions, loading: allContributionsLoading, error: allContributionsError } = useCollection(allContributionsQuery);
+        // 3. Set up Listeners
+        const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setUserData(data);
 
-
-
-    const stats = useMemo(() => {
-        if (!allContributions) return { approved: 0, pending: 0, rejected: 0 };
-        return allContributions.reduce((acc, curr) => {
-            const status = curr.status as SubmissionStatus;
-            if (acc[status] !== undefined) {
-                acc[status]++;
+                // Parse Social Link on load
+                if (data.socialMediaLink) {
+                    try {
+                        const url = new URL(data.socialMediaLink);
+                        const platform = url.hostname.includes('instagram') ? 'instagram' : 'facebook';
+                        const handle = url.pathname.substring(1).replace(/\/$/, '');
+                        setSocialPlatform(platform);
+                        setSocialHandle(handle);
+                    } catch (e) {
+                        setSocialPlatform('facebook');
+                        setSocialHandle('');
+                    }
+                }
+            } else {
+                // User document doesn't exist -> Create it
+                setUserData(null);
+                createProfile(user, userDocRef);
             }
-            return acc;
-        }, { approved: 0, pending: 0, rejected: 0 });
-    }, [allContributions]);
+        });
 
-    useEffect(() => {
-        if (user && !userData && !userDataLoading && !userDataError && firestore && userRef) {
-            const { uid, displayName, email, photoURL } = user;
-            setDoc(userRef, {
+        const unsubscribeRecent = onSnapshot(recentQuery, (snapshot) => {
+            setContributions(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+
+        const unsubscribeAll = onSnapshot(allQuery, (snapshot) => {
+            setAllContributions(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+            // Once we have at least user listener setup (and potentially data), stop loading
+            // We can settle loading state here or debounced, but essentially data is flowing.
+            setIsDataLoading(false);
+        }, (error) => {
+            console.error("Error fetching contributions:", error);
+            setIsDataLoading(false);
+        });
+
+        return () => {
+            unsubscribeUser();
+            unsubscribeRecent();
+            unsubscribeAll();
+        };
+    }, [user, userAuthLoading, firestore]);
+
+    // --- Profile Creation Helper ---
+    const createProfile = async (currentUser: any, ref: any) => {
+        try {
+            const { uid, displayName, email, photoURL } = currentUser;
+            await setDoc(ref, {
                 uid,
                 displayName: displayName || email?.split('@')[0] || 'Anonymous',
                 email,
@@ -106,32 +147,13 @@ export default function ProfilePage() {
                 role: 'user',
                 socialMediaLink: null,
             }, { merge: true });
+        } catch (error) {
+            console.error("Error creating profile:", error);
         }
-    }, [user, userData, userDataLoading, userDataError, userRef, firestore]);
-
-    useEffect(() => {
-        if (userDataLoading) return;
-
-        if (userData?.socialMediaLink) {
-            try {
-                const url = new URL(userData.socialMediaLink);
-                const platform = url.hostname.includes('instagram') ? 'instagram' : 'facebook';
-                const handle = url.pathname.substring(1).replace(/\/$/, '');
-                setSocialPlatform(platform);
-                setSocialHandle(handle);
-            } catch (e) {
-                console.error("Invalid social media link in DB:", userData.socialMediaLink);
-                setSocialPlatform('facebook');
-                setSocialHandle('');
-            }
-        } else {
-            setSocialPlatform('facebook');
-            setSocialHandle('');
-        }
-    }, [userData?.socialMediaLink, userDataLoading]);
+    };
 
     const handleSaveSocialLink = async () => {
-        if (!userRef) return;
+        if (!user || !firestore) return;
         setIsSaving(true);
         let linkToSave = null;
 
@@ -140,15 +162,12 @@ export default function ProfilePage() {
         }
 
         try {
+            const userRef = doc(firestore, 'users', user.uid);
             await setDoc(userRef, { socialMediaLink: linkToSave }, { merge: true });
-            if (linkToSave) {
-                toast({ title: "Success", description: "Your social media link has been updated." });
-            } else {
-                toast({ title: "Success", description: "Your social media link has been removed." });
-            }
+            toast({ title: "Success", description: linkToSave ? "Social link updated." : "Social link removed." });
         } catch (error) {
             console.error("Error updating social media link: ", error);
-            toast({ title: "Error", description: "Failed to update social media link.", variant: "destructive" });
+            toast({ title: "Error", description: "Failed to update social link.", variant: "destructive" });
         } finally {
             setIsSaving(false);
         }
@@ -163,22 +182,19 @@ export default function ProfilePage() {
         }
     };
 
-    const isLoading = userLoading || userDataLoading || contributionsLoading || allContributionsLoading;
-
-    console.log('ProfilePage Loading State:', {
-        userLoading,
-        userDataLoading,
-        contributionsLoading,
-        allContributionsLoading,
-        contributionsError,
-        allContributionsError,
-        userUid: user?.uid,
-        userData: !!userData,
-        firestore: !!firestore
-    });
+    const stats = useMemo(() => {
+        if (!allContributions) return { approved: 0, pending: 0, rejected: 0 };
+        return allContributions.reduce((acc, curr) => {
+            const status = curr.status as SubmissionStatus;
+            if (acc[status] !== undefined) {
+                acc[status]++;
+            }
+            return acc;
+        }, { approved: 0, pending: 0, rejected: 0 });
+    }, [allContributions]);
 
     const renderContent = () => {
-        if (isLoading) {
+        if (userAuthLoading || isDataLoading) {
             return (
                 <div className="container mx-auto flex h-screen items-center justify-center">
                     <LoaderCircle className="h-12 w-12 animate-spin" />
@@ -379,11 +395,6 @@ export default function ProfilePage() {
         );
     }
 
-    return (
-        <AppLayout>
-            {renderContent()}
-        </AppLayout>
-    )
     return (
         <AppLayout>
             {renderContent()}
