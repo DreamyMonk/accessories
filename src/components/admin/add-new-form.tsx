@@ -4,20 +4,17 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, LoaderCircle, Trash2 } from "lucide-react";
+import { Plus, LoaderCircle, Trash2 } from "lucide-react";
 import { useFirestore } from '@/firebase';
-import { collection, query, where, getDocs, addDoc, serverTimestamp, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, addDoc, serverTimestamp, orderBy, onSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { AdminResultCard } from './admin-result-card';
 import { Label } from "@/components/ui/label";
 import { addMasterModel } from '@/app/admin/master-models/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
+import { SearchClient } from '@/components/search/search-client';
 
 export function AddNewForm({ masterModels }: { masterModels: string[] }) {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [results, setResults] = useState<any[] | null>(null);
     const [categories, setCategories] = useState<any[]>([]);
 
     // New Chain States
@@ -37,50 +34,6 @@ export function AddNewForm({ masterModels }: { masterModels: string[] }) {
         });
         return () => unsubscribe();
     }, [firestore]);
-
-    const handleSearch = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!firestore) return;
-
-        setLoading(true);
-        setResults(null);
-
-        try {
-            const accessoriesRef = collection(firestore, 'accessories');
-            // Try explicit array-contains if exact match
-            let q = query(accessoriesRef, where('models', 'array-contains', searchTerm));
-            let querySnapshot = await getDocs(q);
-
-            let searchResults: any[] = [];
-
-            if (querySnapshot.empty) {
-                // Fallback to client-side fuzzy search if Firestore explicit search fails (common with object arrays)
-                const allDocs = await getDocs(collection(firestore, "accessories"));
-                searchResults = allDocs.docs
-                    .map(doc => ({ id: doc.id, ...doc.data() }))
-                    .filter((acc: any) =>
-                        acc.models && acc.models.some((m: any) =>
-                            (typeof m === 'string' ? m : m.name).toLowerCase().includes(searchTerm.toLowerCase())
-                        )
-                    );
-            } else {
-                querySnapshot.forEach((doc) => {
-                    searchResults.push({ id: doc.id, ...doc.data() });
-                });
-            }
-
-            setResults(searchResults);
-            if (searchResults.length === 0) {
-                toast({ title: "No results found", description: "Try a different model name." });
-            }
-
-        } catch (error) {
-            console.error("Error searching for accessories:", error);
-            toast({ title: "Error", description: "An error occurred while searching.", variant: "destructive" });
-        }
-
-        setLoading(false);
-    };
 
     const handleChainRowChange = (index: number, field: 'model' | 'contributorName', value: string) => {
         const newRows = [...chainRows];
@@ -149,7 +102,7 @@ export function AddNewForm({ masterModels }: { masterModels: string[] }) {
     };
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-12">
             {/* Create New Chain Card */}
             <Card className="border-2 border-primary/20 bg-primary/5">
                 <CardHeader>
@@ -222,35 +175,13 @@ export function AddNewForm({ masterModels }: { masterModels: string[] }) {
                 </CardContent>
             </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline text-xl">Add a Model to an Existing Group</CardTitle>
-                    <CardDescription>
-                        Search for an EXISTING compatibility chain by one of its models, then add a NEW model to it.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={handleSearch} className="flex gap-2 mb-6">
-                        <Input
-                            placeholder="Search for a model already in the chain..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                        <Button type="submit" disabled={loading}><Search className="mr-2 h-4 w-4" /> Search</Button>
-                    </form>
-
-                    {loading && <p>Loading...</p>}
-
-                    {results && (
-                        <div className="space-y-4">
-                            <h2 className="font-bold">Found Chains ({results.length})</h2>
-                            {results.map(result => (
-                                <AdminResultCard key={result.id} result={result} masterModels={masterModels} />
-                            ))}
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+            <div className="border-t pt-8">
+                <div className="mb-6">
+                    <h2 className="font-headline text-2xl font-bold">Add to Existing Group</h2>
+                    <p className="text-muted-foreground">Search for an existing group below and click "Contribute" to add a new model to it.</p>
+                </div>
+                <SearchClient masterModels={masterModels} />
+            </div>
         </div>
     );
 }
