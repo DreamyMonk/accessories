@@ -163,6 +163,16 @@ export default function ProfilePage() {
 
     const isLoading = userLoading || userDataLoading || contributionsLoading || allContributionsLoading;
 
+    console.log('ProfilePage Loading State:', {
+        userLoading,
+        userDataLoading,
+        contributionsLoading,
+        allContributionsLoading,
+        userUid: user?.uid,
+        userData: !!userData,
+        firestore: !!firestore
+    });
+
     const renderContent = () => {
         if (isLoading) {
             return (
