@@ -1,5 +1,5 @@
 import { AppLayout } from '@/components/layout/app-layout';
-import { SearchClient } from '@/components/search/search-client';
+import { ContributionFlow } from '@/components/contribute/contribution-flow';
 import { promises as fs } from 'fs';
 import path from 'path';
 
@@ -19,8 +19,14 @@ export default async function ContributePage() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto px-4 py-6">
-        <SearchClient masterModels={masterModels} />
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center mb-10">
+          <h1 className="text-4xl font-bold font-headline mb-4">Contribute to the Database</h1>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            Help other shop owners by adding compatible models. You earn points for every approved contribution!
+          </p>
+        </div>
+        <ContributionFlow masterModels={masterModels} />
       </div>
     </AppLayout>
   );
