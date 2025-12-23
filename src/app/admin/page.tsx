@@ -1,43 +1,56 @@
+'use client';
+
 import { AdminDashboard } from "@/components/admin/admin-dashboard";
 import { collection, getDocs, query, orderBy, getFirestore } from "firebase/firestore";
-import { promises as fs } from 'fs';
-import path from 'path';
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { firebaseConfig } from "@/firebase/config";
+import { useFirestore } from "@/firebase";
+import { useEffect, useState } from "react";
+import { LoaderCircle } from "lucide-react";
+import { getMasterModels } from "./master-models/actions";
 
-// Ensure Firebase is initialized for server-side
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const db = getFirestore(app);
+export default function AdminPage() {
+  const firestore = useFirestore();
+  const [masterModels, setMasterModels] = useState<string[]>([]);
+  const [submissions, setSubmissions] = useState<any[]>([]);
+  const [models, setModels] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-async function getMasterModels() {
-  const filePath = path.join(process.cwd(), 'src', 'data', 'master-models.json');
-  try {
-    const fileContent = await fs.readFile(filePath, 'utf-8');
-    return JSON.parse(fileContent);
-  } catch (error) {
-    console.error("Error reading master models:", error);
-    return [];
+  useEffect(() => {
+    async function fetchData() {
+      if (!firestore) return;
+
+      try {
+        // Fetch Master Models
+        const mm = await getMasterModels();
+        setMasterModels(mm);
+
+        // Fetch Submissions
+        const submissionsRef = collection(firestore, 'contributions');
+        const q = query(submissionsRef, orderBy('submittedAt', 'desc'));
+        const subSnapshot = await getDocs(q);
+        setSubmissions(subSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+
+        // Fetch Models (Accessories)
+        const modelsRef = collection(firestore, 'accessories');
+        const modelSnapshot = await getDocs(modelsRef);
+        setModels(modelSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+
+      } catch (error) {
+        console.error("Error fetching admin data:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [firestore]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <LoaderCircle className="animate-spin h-12 w-12" />
+      </div>
+    )
   }
-}
-
-async function getSubmissions() {
-  const submissionsRef = collection(db, 'contributions');
-  const q = query(submissionsRef, orderBy('submittedAt', 'desc'));
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-}
-
-async function getModels() {
-  const modelsRef = collection(db, 'accessories');
-  const querySnapshot = await getDocs(modelsRef);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-}
-
-
-export default async function AdminPage() {
-  const masterModels = await getMasterModels();
-  const submissions = await getSubmissions();
-  const models = await getModels();
 
   return (
     <div className="space-y-8">
