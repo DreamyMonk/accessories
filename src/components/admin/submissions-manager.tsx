@@ -7,7 +7,7 @@ import { Check, X, LoaderCircle, Pencil, Save, Trash2, Clock } from "lucide-reac
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore } from '@/firebase';
-import { doc, updateDoc, deleteDoc, serverTimestamp, addDoc, collection, getDoc, increment } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, serverTimestamp, addDoc, collection, getDoc, increment, query, where, getDocs } from 'firebase/firestore';
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { addMasterModel } from '@/app/admin/master-models/actions';
 
 // Helper function to format Firestore timestamps safely
 const formatDate = (timestamp: any) => {
@@ -73,25 +74,74 @@ export function SubmissionsManager({ initialSubmissions }: { initialSubmissions:
           }
         }
 
-        // 2. Prepare Models with attribution
-        const modelsList = Array.isArray(submission.models) ? submission.models : [submission.models];
-        const structuredModels = modelsList.map((m: string) => ({
-          name: m,
-          contributorUid: submission.submittedBy
-        }));
+        const modelsList: string[] = Array.isArray(submission.models) ? submission.models : [submission.models];
 
-        // 3. Create Accessory Document
-        await addDoc(collection(firestore, 'accessories'), {
-          accessoryType: submission.accessoryType,
-          models: structuredModels,
-          contributor: {
-            uid: userData.uid || 'anonymous',
-            name: userData.displayName || 'Anonymous',
-            points: 0 // This points field in accessory might be redundant if we fetch separate, but good for cache
-          },
-          lastUpdated: serverTimestamp(),
-          source: submission.source || ''
-        });
+        // 2. Add to Master Models List (Server Action)
+        // This ensures future searches will find these models even if they aren't in the global list yet
+        for (const model of modelsList) {
+          await addMasterModel(model);
+        }
+
+        // 3. Find or Create Accessory Document
+        // We search for an existing accessory group of this type
+        const q = query(
+          collection(firestore, 'accessories'),
+          where('accessoryType', '==', submission.accessoryType)
+        );
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          // Merge into existing document(s) - usually pick the first one matching
+          // In a perfect world we might have better grouping, but Type is our grouping key here.
+          const existingDoc = querySnapshot.docs[0];
+          const existingData = existingDoc.data();
+          const existingModels = existingData.models || [];
+
+          // Filter out models that already exist in this accessory group
+          const newModelsToAdd = modelsList.filter(newModel =>
+            !existingModels.some((em: any) =>
+              (typeof em === 'string' ? em : em.name).toLowerCase() === newModel.toLowerCase()
+            )
+          );
+
+          if (newModelsToAdd.length > 0) {
+            const updatedModels = [
+              ...existingModels,
+              ...newModelsToAdd.map(m => ({
+                name: m,
+                contributorUid: submission.submittedBy
+              }))
+            ];
+
+            await updateDoc(doc(firestore, 'accessories', existingDoc.id), {
+              models: updatedModels,
+              lastUpdated: serverTimestamp()
+            });
+            toast({ title: "Updated", description: `Added ${newModelsToAdd.length} new models to existing accessory list.` });
+          } else {
+            toast({ title: "Skipped", description: "All models in this submission are already in the compatibility list." });
+          }
+
+        } else {
+          // Create New Accessory Document
+          const structuredModels = modelsList.map((m: string) => ({
+            name: m,
+            contributorUid: submission.submittedBy
+          }));
+
+          await addDoc(collection(firestore, 'accessories'), {
+            accessoryType: submission.accessoryType,
+            models: structuredModels,
+            contributor: {
+              uid: userData.uid || 'anonymous',
+              name: userData.displayName || 'Anonymous',
+              points: 0
+            },
+            lastUpdated: serverTimestamp(),
+            source: submission.source || ''
+          });
+          toast({ title: "Created", description: "New accessory compatibility list created." });
+        }
       }
 
       const ref = doc(firestore, 'contributions', submission.id);
@@ -103,10 +153,6 @@ export function SubmissionsManager({ initialSubmissions }: { initialSubmissions:
       // Optimistic update
       setSubmissions(prev => prev.map(s => s.id === submission.id ? { ...s, status } : s));
 
-      toast({
-        title: `Submission ${status === 'approved' ? 'Approved' : 'Rejected'}`,
-        description: status === 'approved' ? "Contribution published to live site." : "Contribution rejected."
-      });
 
     } catch (error) {
       console.error("Error updating submission:", error);
