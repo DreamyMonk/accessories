@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from "react";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SubmissionsManager } from './submissions-manager';
 import { MasterModelManager } from './master-model-manager';
@@ -20,8 +22,10 @@ export function AdminDashboard({ masterModels, submissions, models }: { masterMo
     masterModels: masterModels.length
   };
 
+  const [activeTab, setActiveTab] = useState("overview");
+
   return (
-    <Tabs defaultValue="overview" className="space-y-6">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
       <TabsList className="grid w-full grid-cols-5 p-1 bg-muted/50 rounded-xl">
         <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Overview</TabsTrigger>
         <TabsTrigger value="submissions" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Submissions</TabsTrigger>
@@ -83,30 +87,38 @@ export function AdminDashboard({ masterModels, submissions, models }: { masterMo
               <CardDescription>Common tasks you perform often.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 grid-cols-2">
-              <TabsTrigger value="submissions" asChild>
-                <Button variant="outline" className="h-24 flex flex-col gap-2 hover:bg-muted/50 border-dashed border-2">
-                  <FileText className="h-6 w-6" />
-                  Review Submissions
-                </Button>
-              </TabsTrigger>
-              <TabsTrigger value="add-new" asChild>
-                <Button variant="outline" className="h-24 flex flex-col gap-2 hover:bg-muted/50 border-dashed border-2">
-                  <Plus className="h-6 w-6" />
-                  Add New Accessory
-                </Button>
-              </TabsTrigger>
-              <TabsTrigger value="master-models" asChild>
-                <Button variant="outline" className="h-24 flex flex-col gap-2 hover:bg-muted/50 border-dashed border-2">
-                  <Database className="h-6 w-6" />
-                  Manage Master List
-                </Button>
-              </TabsTrigger>
-              <TabsTrigger value="manage-groups" asChild>
-                <Button variant="outline" className="h-24 flex flex-col gap-2 hover:bg-muted/50 border-dashed border-2">
-                  <LayoutGrid className="h-6 w-6" />
-                  Manage Groups
-                </Button>
-              </TabsTrigger>
+              <Button
+                variant="outline"
+                className="h-24 flex flex-col gap-2 hover:bg-muted/50 border-dashed border-2"
+                onClick={() => setActiveTab("submissions")}
+              >
+                <FileText className="h-6 w-6" />
+                Review Submissions
+              </Button>
+              <Button
+                variant="outline"
+                className="h-24 flex flex-col gap-2 hover:bg-muted/50 border-dashed border-2"
+                onClick={() => setActiveTab("add-new")}
+              >
+                <Plus className="h-6 w-6" />
+                Add New Accessory
+              </Button>
+              <Button
+                variant="outline"
+                className="h-24 flex flex-col gap-2 hover:bg-muted/50 border-dashed border-2"
+                onClick={() => setActiveTab("master-models")}
+              >
+                <Database className="h-6 w-6" />
+                Manage Master List
+              </Button>
+              <Button
+                variant="outline"
+                className="h-24 flex flex-col gap-2 hover:bg-muted/50 border-dashed border-2"
+                onClick={() => setActiveTab("manage-groups")}
+              >
+                <LayoutGrid className="h-6 w-6" />
+                Manage Groups
+              </Button>
             </CardContent>
           </Card>
           <Card className="col-span-3 shadow-sm bg-gradient-to-br from-primary/5 to-background border-primary/20">
