@@ -76,24 +76,36 @@ export async function addMasterModelsFromCsv(csvContent: string): Promise<{ succ
   try {
     const existingModels = await readMasterModels();
 
-    const parseResult = Papa.parse(csvContent, { header: true });
+    const parseResult = Papa.parse(csvContent, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (h) => h.trim().toLowerCase()
+    });
 
-    if (parseResult.errors.length > 0) {
-      return { success: false, error: 'Failed to parse CSV file. Please check the format.' };
+    // Only fail if we genuinely have no data and effectively failed completely
+    if (parseResult.data.length === 0 && parseResult.errors.length > 0) {
+      console.error("CSV Parse Errors:", parseResult.errors);
+      return { success: false, error: 'Failed to parse CSV file. Ensure it has a "model" header.' };
     }
 
     const newModels = parseResult.data
-      .map((row: any) => row.model?.trim())
-      .filter((model: string | undefined) => model && !existingModels.includes(model));
+      .map((row: any) => {
+        // Try common column names
+        return row.model?.trim() || row['master model']?.trim() || row.name?.trim() || row.value?.trim();
+      })
+      .filter((model: string | undefined) => model && model.length > 0 && !existingModels.includes(model));
 
-    if (newModels.length === 0) {
+    // Deduplicate within the new batch
+    const uniqueNewModels = Array.from(new Set(newModels));
+
+    if (uniqueNewModels.length === 0) {
       return { success: true, addedCount: 0 };
     }
 
-    const updatedModels = [...existingModels, ...newModels].sort();
+    const updatedModels = [...existingModels, ...uniqueNewModels].sort();
     await writeMasterModels(updatedModels);
 
-    return { success: true, addedCount: newModels.length };
+    return { success: true, addedCount: uniqueNewModels.length };
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
