@@ -152,7 +152,7 @@ export function SearchClient({ masterModels: initialMasterModels = DEFAULT_EMPTY
         matchingAccessories.forEach(acc => {
           acc.models.forEach((m: any) => {
             const name = getModelName(m);
-            if (name) foundModelNames.add(name.toLowerCase());
+            if (name) foundModelNames.add(name.trim().toLowerCase());
           });
         });
 
@@ -163,7 +163,7 @@ export function SearchClient({ masterModels: initialMasterModels = DEFAULT_EMPTY
 
         const orphanMasterModels = matchingMasterModels.filter(m => {
           // Check if this model 'm' is effectively covered by any accessory result
-          return !foundModelNames.has(m.toLowerCase());
+          return !foundModelNames.has(m.trim().toLowerCase());
         });
 
         // Create synthetic results for orphans
@@ -191,7 +191,32 @@ export function SearchClient({ masterModels: initialMasterModels = DEFAULT_EMPTY
             return 0;
           });
 
-          setResults(combinedResults);
+          // Deduplication: Remove "Single" items if their model is already covered by a "Chain" item in the results.
+          const modelsInChains = new Set<string>();
+          combinedResults.forEach(res => {
+            if (res.models && res.models.length > 1) {
+              res.models.forEach(m => {
+                const name = getModelName(m);
+                if (name) modelsInChains.add(name.trim().toLowerCase());
+              });
+            }
+          });
+
+          const finalResults = combinedResults.filter(res => {
+            // Always keep chains
+            if (res.models && res.models.length > 1) return true;
+
+            // For singles, check if covered
+            if (res.models && res.models.length === 1) {
+              const name = getModelName(res.models[0]);
+              if (name && modelsInChains.has(name.trim().toLowerCase())) {
+                return false; // Filter out, covered by chain
+              }
+            }
+            return true;
+          });
+
+          setResults(finalResults);
         } else {
           // Only perform fuzzy search if text is meaningful
           if (currentSearchTerm.trim().length > 2) {
