@@ -34,10 +34,8 @@ const searchSchema = z.object({
 
 type SearchFormValues = z.infer<typeof searchSchema>;
 
-export function SearchClient({ masterModels, showContributorInput = false }: { masterModels: string[], showContributorInput?: boolean }) {
+export function SearchClient({ masterModels: initialMasterModels = [], showContributorInput = false }: { masterModels?: string[], showContributorInput?: boolean }) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-
-
 
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<Accessory[] | null>(null);
@@ -63,6 +61,19 @@ export function SearchClient({ masterModels, showContributorInput = false }: { m
   });
 
   const searchTerm = form.watch('searchTerm');
+
+  // Fetch Master Models from Firestore to ensure real-time data
+  const masterModelsQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'master_models'), orderBy('name', 'asc'));
+  }, [firestore]);
+
+  const { data: masterModelDocs } = useCollection(masterModelsQuery);
+
+  const masterModels = useMemo(() => {
+    // Prefer Firestore data, fall back to initial props
+    return masterModelDocs ? masterModelDocs.map(d => d.name as string) : initialMasterModels;
+  }, [masterModelDocs, initialMasterModels]);
 
   const categoriesQuery = useMemo(() => {
     if (!firestore) return null;
@@ -150,7 +161,6 @@ export function SearchClient({ masterModels, showContributorInput = false }: { m
 
         const orphanMasterModels = matchingMasterModels.filter(m => {
           // Check if this model 'm' is effectively covered by any accessory result
-          // We use simple string matching here.
           return !foundModelNames.has(m.toLowerCase());
         });
 
@@ -162,7 +172,7 @@ export function SearchClient({ masterModels, showContributorInput = false }: { m
           contributor: { uid: 'system', name: 'Master List', points: 0 },
           lastUpdated: null as any,
           source: 'Master List'
-        } as any)); // Type casting to bypass strict Accessory type checks if needed
+        } as any));
 
         const combinedResults = [...matchingAccessories, ...syntheticResults];
 
@@ -211,11 +221,13 @@ export function SearchClient({ masterModels, showContributorInput = false }: { m
     };
   }, []);
 
+  // Updated Suggestion Logic to include Master Models
   useEffect(() => {
     if (searchTerm && searchTerm.length > 1 && accessories && activeCategory) {
       const searchLower = searchTerm.toLowerCase();
       const uniqueSuggestions = new Set<string>();
 
+      // 1. Suggestions from Accessories
       accessories
         .forEach(acc => {
           if (acc.models && Array.isArray(acc.models)) {
@@ -227,13 +239,21 @@ export function SearchClient({ masterModels, showContributorInput = false }: { m
             });
           }
         });
+
+      // 2. Suggestions from Master Models
+      masterModels.forEach(model => {
+        if (model.toLowerCase().includes(searchLower)) {
+          uniqueSuggestions.add(model);
+        }
+      });
+
       setSuggestions(Array.from(uniqueSuggestions).slice(0, 10)); // Limit to 10 suggestions
       setIsSuggestionBoxOpen(uniqueSuggestions.size > 0);
     } else {
       setSuggestions([]);
       setIsSuggestionBoxOpen(false);
     }
-  }, [searchTerm, accessories, activeCategory]);
+  }, [searchTerm, accessories, activeCategory, masterModels]);
 
 
   const onSubmit = (data: SearchFormValues) => {
@@ -377,7 +397,7 @@ export function SearchClient({ masterModels, showContributorInput = false }: { m
     <div className="space-y-8">
       <section id="search" className="scroll-mt-20">
         <div className="text-center mb-8">
-          <h1 className="font-headline text-3xl md:t ext-4xl font-bold tracking-tight">
+          <h1 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
             Accessory Compatibility Finder
           </h1>
           <p className="text-muted-foreground mt-2">
