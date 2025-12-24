@@ -123,8 +123,9 @@ export function SearchClient({ masterModels, showContributorInput = false }: { m
 
         const searchLower = currentSearchTerm.toLowerCase();
 
+        // 1. Find matching accessories (REAL results)
         // Paranoid filtering
-        const filteredResults = accessories.filter((acc) => {
+        const matchingAccessories = accessories.filter((acc) => {
           if (!acc.models || !Array.isArray(acc.models)) return false;
           return acc.models.some((m: any) => {
             const name = getModelName(m);
@@ -132,17 +133,53 @@ export function SearchClient({ masterModels, showContributorInput = false }: { m
           });
         });
 
-        if (filteredResults.length > 0) {
+        // 2. Find matching Master Models (ORPHAN results)
+        // Collect model names already found in accessories to avoid duplicates
+        const foundModelNames = new Set<string>();
+        matchingAccessories.forEach(acc => {
+          acc.models.forEach((m: any) => {
+            const name = getModelName(m);
+            if (name) foundModelNames.add(name.toLowerCase());
+          });
+        });
+
+        // Filter master models that match search BUT are not effectively covered by accessory results
+        const matchingMasterModels = masterModels.filter(m =>
+          m.toLowerCase().includes(searchLower)
+        );
+
+        const orphanMasterModels = matchingMasterModels.filter(m => {
+          // Check if this model 'm' is effectively covered by any accessory result
+          // We use simple string matching here.
+          return !foundModelNames.has(m.toLowerCase());
+        });
+
+        // Create synthetic results for orphans
+        const syntheticResults: Accessory[] = orphanMasterModels.map(m => ({
+          id: `master-${m}`,
+          accessoryType: activeCategory || 'Model',
+          models: [{ name: m }], // Normalize as object to match types
+          contributor: { uid: 'system', name: 'Master List', points: 0 },
+          lastUpdated: null as any,
+          source: 'Master List'
+        } as any)); // Type casting to bypass strict Accessory type checks if needed
+
+        const combinedResults = [...matchingAccessories, ...syntheticResults];
+
+        if (combinedResults.length > 0) {
           // Prioritize chains (more than 1 model) over single items
-          filteredResults.sort((a, b) => {
-            const aIsChain = a.models && a.models.length > 1;
-            const bIsChain = b.models && b.models.length > 1;
+          combinedResults.sort((a, b) => {
+            const aModels = a.models || [];
+            const bModels = b.models || [];
+            const aIsChain = aModels.length > 1;
+            const bIsChain = bModels.length > 1;
+
             if (aIsChain && !bIsChain) return -1;
             if (!aIsChain && bIsChain) return 1;
             return 0;
           });
 
-          setResults(filteredResults);
+          setResults(combinedResults);
         } else {
           // Only perform fuzzy search if text is meaningful
           if (currentSearchTerm.trim().length > 2) {
@@ -158,7 +195,7 @@ export function SearchClient({ masterModels, showContributorInput = false }: { m
         setIsLoading(false);
       }
     },
-    [accessories, activeCategory]
+    [accessories, activeCategory, masterModels]
   );
 
   useEffect(() => {
