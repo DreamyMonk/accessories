@@ -4,7 +4,7 @@ import { useState, useRef, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Trash2, PlusCircle, LoaderCircle, Upload, Download } from "lucide-react";
+import { Trash2, PlusCircle, LoaderCircle, Upload, Download, Search } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useCollection } from '@/firebase';
@@ -13,6 +13,7 @@ import Papa from 'papaparse';
 
 export function MasterModelManager() {
   const [newModel, setNewModel] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -30,6 +31,11 @@ export function MasterModelManager() {
   const models = useMemo(() => {
     return modelDocs ? modelDocs.map(d => d.name as string) : [];
   }, [modelDocs]);
+
+  const filteredModels = useMemo(() => {
+    if (!searchTerm.trim()) return models;
+    return models.filter(model => model.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [models, searchTerm]);
 
   const handleAddModel = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,8 +105,6 @@ export function MasterModelManager() {
           .filter((m: string | undefined): m is string => !!m && m.length > 0);
 
         // Filter out models that already exist in the CURRENT list to save writes
-        // (Client-side check is good enough for user feedback, Firestore will just overwrite if we setDoc anyway)
-        // But to avoid unnecessary writes, let's filter.
         const uniqueNewModels = Array.from(new Set(newModelsToProcess))
           .filter(m => !models.includes(m));
 
@@ -172,14 +176,27 @@ export function MasterModelManager() {
           </form>
 
           <div className="space-y-2">
-            <h3 className="text-sm font-medium">Existing Models ({models.length})</h3>
+            <div className="flex items-center justify-between pb-2">
+              <h3 className="text-sm font-medium">Existing Models ({models.length})</h3>
+            </div>
+
+            <div className="relative mb-2">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search models to delete..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+
             <ScrollArea className="h-72 w-full rounded-md border">
               <div className="p-4">
                 {loading && models.length === 0 && <div className="flex justify-center p-4"><LoaderCircle className="animate-spin" /></div>}
 
-                {!loading && models.length > 0 ? (
+                {!loading && filteredModels.length > 0 ? (
                   <ul className="space-y-2">
-                    {models.map(model => (
+                    {filteredModels.map(model => (
                       <li key={model} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
                         <span className="text-sm">{model}</span>
                         <Button
@@ -187,6 +204,7 @@ export function MasterModelManager() {
                           size="icon"
                           onClick={() => handleDeleteModel(model)}
                           disabled={isDeleting === model}
+                          aria-label={`Delete ${model}`}
                         >
                           {isDeleting === model ? <LoaderCircle className="animate-spin h-4 w-4" /> : <Trash2 className="text-destructive h-4 w-4" />}
                         </Button>
@@ -194,7 +212,9 @@ export function MasterModelManager() {
                     ))}
                   </ul>
                 ) : (
-                  !loading && <p className="text-sm text-center text-muted-foreground p-4">No models found.</p>
+                  !loading && <p className="text-sm text-center text-muted-foreground p-4">
+                    {searchTerm ? "No models match your search." : "No models found."}
+                  </p>
                 )}
               </div>
             </ScrollArea>
