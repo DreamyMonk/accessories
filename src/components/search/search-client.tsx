@@ -34,7 +34,9 @@ const searchSchema = z.object({
 
 type SearchFormValues = z.infer<typeof searchSchema>;
 
-export function SearchClient({ masterModels: initialMasterModels = [], showContributorInput = false }: { masterModels?: string[], showContributorInput?: boolean }) {
+const DEFAULT_EMPTY_ARRAY: string[] = [];
+
+export function SearchClient({ masterModels: initialMasterModels = DEFAULT_EMPTY_ARRAY, showContributorInput = false }: { masterModels?: string[], showContributorInput?: boolean }) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
