@@ -99,9 +99,10 @@ export function SubmissionsManager({ initialSubmissions }: { initialSubmissions:
 
           // Filter out models that already exist in this accessory group
           const newModelsToAdd = modelsList.filter(newModel =>
-            !existingModels.some((em: any) =>
-              (typeof em === 'string' ? em : em.name).toLowerCase() === newModel.toLowerCase()
-            )
+            !existingModels.some((em: any) => {
+              const emName = typeof em === 'string' ? em : em?.name;
+              return typeof emName === 'string' && emName.toLowerCase() === newModel.toLowerCase();
+            })
           );
 
           if (newModelsToAdd.length > 0) {
