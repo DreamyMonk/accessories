@@ -7,11 +7,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link2, LogOut, Settings, Award, Shield, User, KeyRound, Trash2, LoaderCircle, AlertTriangle } from 'lucide-react';
-import { useAuth } from '@/components/auth/auth-provider';
 import Link from 'next/link';
 import { useState } from 'react';
-import { deleteUser, updatePassword, sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '@/firebase'; // Ensure auth is imported from valid source
+import { deleteUser, updatePassword, sendPasswordResetEmail, signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import {
     Dialog,
@@ -29,7 +27,7 @@ import { useRouter } from 'next/navigation';
 
 export default function SettingsPage() {
     const { user, loading } = useUser();
-    const { signOut } = useAuth();
+    const auth = useFirebaseAuth();
     const { toast } = useToast();
     const router = useRouter();
 
@@ -169,7 +167,7 @@ export default function SettingsPage() {
                             </div>
                         </div>
                         <div className="flex flex-col gap-2 w-full md:w-auto">
-                            <Button variant="outline" onClick={() => signOut()}>
+                            <Button variant="outline" onClick={() => signOut(auth)}>
                                 <LogOut className="h-4 w-4 mr-2" /> Sign Out
                             </Button>
 
