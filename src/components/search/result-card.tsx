@@ -12,7 +12,17 @@ import { ContributeToGroupDialog } from '@/components/contribute/contribute-to-g
 import { ContributorInfo } from './contributor-info';
 import { ModelContribution } from '@/lib/types';
 
-export function ResultCard({ result, searchedModel, index }: { result: any, searchedModel: string, index: number }) {
+export function ResultCard({
+  result,
+  searchedModel,
+  index,
+  showContributorInput = false
+}: {
+  result: any,
+  searchedModel: string,
+  index: number,
+  showContributorInput?: boolean
+}) {
   const [showAll, setShowAll] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -109,7 +119,7 @@ export function ResultCard({ result, searchedModel, index }: { result: any, sear
         </div>
         <Separator className="my-4" />
         <ContributorInfo uid={result.contributor?.uid} points={result.contributor?.points} />
-        <ContributeToGroupDialog result={result} open={isDialogOpen} onOpenChange={setIsDialogOpen} />
+        <ContributeToGroupDialog result={result} open={isDialogOpen} onOpenChange={setIsDialogOpen} showContributorInput={showContributorInput} />
       </CardFooter>
     </Card>
   );

@@ -19,12 +19,13 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Label } from '@/components/ui/label';
 
-export function ContributeToGroupDialog({ result, open, onOpenChange }: { result: any, open: boolean, onOpenChange: (open: boolean) => void }) {
+export function ContributeToGroupDialog({ result, open, onOpenChange, showContributorInput = false }: { result: any, open: boolean, onOpenChange: (open: boolean) => void, showContributorInput?: boolean }) {
     const { toast } = useToast();
     const firestore = useFirestore();
     const { user } = useUser();
     const [modelName, setModelName] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    const [contributorName, setContributorName] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const filteredModels = result.models.filter((model: any) => {
@@ -54,7 +55,7 @@ export function ContributeToGroupDialog({ result, open, onOpenChange }: { result
 
         setIsSubmitting(true);
 
-        const contributionData = {
+        const contributionData: any = {
             accessoryType: result.accessoryType,
             models: [modelToSubmit],
             isNewModel: true,
@@ -65,6 +66,10 @@ export function ContributeToGroupDialog({ result, open, onOpenChange }: { result
             addToAccessoryId: result.id,
         };
 
+        if (showContributorInput && contributorName.trim()) {
+            contributionData.contributorName = contributorName.trim();
+        }
+
         const contributionsCollectionRef = collection(firestore, "contributions");
 
         addDoc(contributionsCollectionRef, contributionData)
@@ -72,6 +77,7 @@ export function ContributeToGroupDialog({ result, open, onOpenChange }: { result
                 toast({ title: "Submission Received!", description: "Thank you for your contribution. It will be reviewed shortly." });
                 setModelName('');
                 setSearchTerm('');
+                setContributorName('');
                 setIsSubmitting(false);
                 onOpenChange(false);
             }).catch(error => {
@@ -154,6 +160,19 @@ export function ContributeToGroupDialog({ result, open, onOpenChange }: { result
                                 value={modelName}
                                 onChange={(e) => setModelName(e.target.value)}
                             />
+                        </div>
+                    )}
+
+                    {showContributorInput && (
+                        <div className="space-y-2">
+                            <Label htmlFor="contributor-name">Contributor Name (Optional)</Label>
+                            <Input
+                                id="contributor-name"
+                                placeholder="Enter contributor name"
+                                value={contributorName}
+                                onChange={(e) => setContributorName(e.target.value)}
+                            />
+                            <p className="text-[10px] text-muted-foreground">This name will be credited for this model.</p>
                         </div>
                     )}
                 </div>

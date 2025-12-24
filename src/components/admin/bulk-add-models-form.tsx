@@ -22,10 +22,10 @@ export function BulkAddModelsForm() {
     };
 
     const handleDownloadSample = () => {
-        const headers = ['accessoryId', 'model', 'contributorName'];
+        const headers = ['model', 'accessoryId', 'contributorName'];
         const sampleData = [
-            ['replace-with-accessory-id', 'iPhone 13', 'Existing Contributor'],
-            ['replace-with-accessory-id', 'Samsung Galaxy S22', ''],
+            ['iPhone 13|iPhone 13 Pro', 'replace-with-accessory-id', 'John Doe|Jane Smith'],
+            ['Samsung Galaxy S22', 'replace-with-accessory-id', ''],
         ];
 
         const csvContent = [
@@ -85,17 +85,28 @@ export function BulkAddModelsForm() {
             for (const line of lines) {
                 const values = line.split(',').map(v => v.trim());
                 const accessoryId = values[accessoryIdIndex];
-                const modelName = values[modelIndex];
-                const contributorName = contributorNameIndex !== -1 ? values[contributorNameIndex] : undefined;
+                const rawModelData = values[modelIndex];
+                const rawContributorData = contributorNameIndex !== -1 ? values[contributorNameIndex] : '';
 
-                if (accessoryId && modelName) {
+                if (accessoryId && rawModelData) {
                     const accessoryRef = doc(firestore, 'accessories', accessoryId);
-                    const modelObject: any = { name: modelName };
-                    if (contributorName) {
-                        modelObject.contributorName = contributorName;
-                    }
-                    batch.update(accessoryRef, { models: arrayUnion(modelObject) });
-                    operationsCount++;
+
+                    // Split by pipe '|' and filter empty strings
+                    const models = rawModelData.split('|').map(m => m.trim()).filter(Boolean);
+                    const contributors = rawContributorData ? rawContributorData.split('|').map(c => c.trim()) : [];
+
+                    models.forEach((modelName, index) => {
+                        const contributorName = contributors[index] || contributors[0] || undefined; // Use specific index, fallback to first, or undefined
+
+                        const modelObject: any = { name: modelName };
+                        if (contributorName) {
+                            modelObject.contributorName = contributorName;
+                        }
+                        // Note: arrayUnion might not work perfectly with multiple identical updates in same batch but different objects
+                        // However, assuming unique model names per batch for simplicty or relying on Firestore behavior.
+                        batch.update(accessoryRef, { models: arrayUnion(modelObject) });
+                        operationsCount++;
+                    });
                 }
             }
 
@@ -164,7 +175,9 @@ export function BulkAddModelsForm() {
                     </Button>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                    Required Headers: <code>accessoryId</code>, <code>model</code>. Optional: <code>contributorName</code>.
+                    Recommended Columns: <code>model</code>, <code>accessoryId</code>, <code>contributorName</code>.
+                    <br />
+                    Use <code>|</code> to separate multiple models or contributors in a single row.
                 </p>
             </CardContent>
         </Card>

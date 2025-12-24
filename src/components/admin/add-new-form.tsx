@@ -180,7 +180,7 @@ export function AddNewForm({ masterModels }: { masterModels: string[] }) {
                     <h2 className="font-headline text-2xl font-bold">Add to Existing Group</h2>
                     <p className="text-muted-foreground">Search for an existing group below and click "Contribute" to add a new model to it.</p>
                 </div>
-                <SearchClient masterModels={masterModels} />
+                <SearchClient masterModels={masterModels} showContributorInput={true} />
             </div>
         </div>
     );

@@ -34,8 +34,11 @@ const searchSchema = z.object({
 
 type SearchFormValues = z.infer<typeof searchSchema>;
 
-export function SearchClient({ masterModels }: { masterModels: string[] }) {
+export function SearchClient({ masterModels, showContributorInput = false }: { masterModels: string[], showContributorInput?: boolean }) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+
+
+
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<Accessory[] | null>(null);
   const [searchedTerm, setSearchedTerm] = useState<string>('');
@@ -268,6 +271,7 @@ export function SearchClient({ masterModels }: { masterModels: string[] }) {
               result={{ ...result, lastUpdated: formatTimestamp(result.lastUpdated) }}
               searchedModel={searchedTerm}
               index={i}
+              showContributorInput={showContributorInput}
             />
           ))}
         </div>
