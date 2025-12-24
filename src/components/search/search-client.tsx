@@ -133,6 +133,15 @@ export function SearchClient({ masterModels, showContributorInput = false }: { m
         });
 
         if (filteredResults.length > 0) {
+          // Prioritize chains (more than 1 model) over single items
+          filteredResults.sort((a, b) => {
+            const aIsChain = a.models && a.models.length > 1;
+            const bIsChain = b.models && b.models.length > 1;
+            if (aIsChain && !bIsChain) return -1;
+            if (!aIsChain && bIsChain) return 1;
+            return 0;
+          });
+
           setResults(filteredResults);
         } else {
           // Only perform fuzzy search if text is meaningful
