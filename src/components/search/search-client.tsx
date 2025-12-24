@@ -134,7 +134,12 @@ export function SearchClient({ masterModels: initialMasterModels = DEFAULT_EMPTY
           return;
         }
 
-        const searchLower = currentSearchTerm.toLowerCase();
+        const searchLower = currentSearchTerm.toLowerCase().trim();
+
+        // Smart Search: Check if the search term matches a known Master Model exactly.
+        // If it does, we assume the user wants that specific model and switch to EXACT matching.
+        // If not, we keep using PARTIAL (fuzzy) matching to help discovery.
+        const isExactMatch = masterModels.some(m => m.toLowerCase() === searchLower);
 
         // 1. Find matching accessories (REAL results)
         // Paranoid filtering
@@ -142,7 +147,13 @@ export function SearchClient({ masterModels: initialMasterModels = DEFAULT_EMPTY
           if (!acc.models || !Array.isArray(acc.models)) return false;
           return acc.models.some((m: any) => {
             const name = getModelName(m);
-            return typeof name === 'string' && name.toLowerCase().includes(searchLower);
+            if (!name) return false;
+            const nameLower = name.trim().toLowerCase();
+
+            if (isExactMatch) {
+              return nameLower === searchLower;
+            }
+            return nameLower.includes(searchLower);
           });
         });
 
@@ -157,9 +168,13 @@ export function SearchClient({ masterModels: initialMasterModels = DEFAULT_EMPTY
         });
 
         // Filter master models that match search BUT are not effectively covered by accessory results
-        const matchingMasterModels = masterModels.filter(m =>
-          m.toLowerCase().includes(searchLower)
-        );
+        const matchingMasterModels = masterModels.filter(m => {
+          const mLower = m.toLowerCase();
+          if (isExactMatch) {
+            return mLower === searchLower;
+          }
+          return mLower.includes(searchLower);
+        });
 
         const orphanMasterModels = matchingMasterModels.filter(m => {
           // Check if this model 'm' is effectively covered by any accessory result
