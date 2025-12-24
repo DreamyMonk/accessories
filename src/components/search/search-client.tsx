@@ -125,7 +125,7 @@ export function SearchClient({ masterModels }: { masterModels: string[] }) {
           if (!acc.models || !Array.isArray(acc.models)) return false;
           return acc.models.some((m: any) => {
             const name = getModelName(m);
-            return name && name.toLowerCase().includes(searchLower);
+            return typeof name === 'string' && name.toLowerCase().includes(searchLower);
           });
         });
 
@@ -172,7 +172,7 @@ export function SearchClient({ masterModels }: { masterModels: string[] }) {
           if (acc.models && Array.isArray(acc.models)) {
             acc.models.forEach((model: any) => {
               const modelName = getModelName(model);
-              if (modelName.toLowerCase().includes(searchLower)) {
+              if (typeof modelName === 'string' && modelName.toLowerCase().includes(searchLower)) {
                 uniqueSuggestions.add(modelName);
               }
             });

@@ -31,11 +31,17 @@ export function ResultCard({ result, searchedModel, index }: { result: any, sear
     return undefined;
   }
 
-  const mainModelObj = result.models.find((m: any) => getModelName(m).toLowerCase() === searchedModel.toLowerCase());
+  const mainModelObj = result.models.find((m: any) => {
+    const name = getModelName(m);
+    return typeof name === 'string' && name.toLowerCase() === searchedModel.toLowerCase();
+  });
   const mainModelName = mainModelObj ? getModelName(mainModelObj) : searchedModel;
   const mainModelContributor = mainModelObj ? getContributorUid(mainModelObj) : result.contributor.uid;
 
-  const otherModels = result.models.filter((m: any) => getModelName(m).toLowerCase() !== searchedModel.toLowerCase());
+  const otherModels = result.models.filter((m: any) => {
+    const name = getModelName(m);
+    return typeof name === 'string' && name.toLowerCase() !== searchedModel.toLowerCase();
+  });
 
   const topItems = otherModels.slice(0, 5);
   const remainingItems = otherModels.slice(5);
