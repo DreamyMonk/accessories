@@ -21,6 +21,7 @@ import { ResultCard } from '@/components/search/result-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '../ui/card';
 import { useCollection, useFirestore } from '@/firebase';
+import { logSearch } from '@/lib/analytics';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import type { Accessory, ModelContribution } from '@/lib/types';
 import { format } from 'date-fns';
@@ -299,7 +300,12 @@ export function SearchClient({ masterModels: initialMasterModels = DEFAULT_EMPTY
 
 
   const onSubmit = (data: SearchFormValues) => {
-    performSearch(data.searchTerm);
+    setSearchedTerm(data.model);
+    setHasSearched(true);
+    setIsSuggestionBoxOpen(false);
+
+    // Log the search for analytics
+    logSearch(firestore, data.model, activeCategory);
   };
 
   const handleSuggestionClick = (suggestion: string) => {

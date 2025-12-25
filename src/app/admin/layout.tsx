@@ -12,7 +12,7 @@ import {
   SidebarFooter,
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/logo';
-import { Home, LoaderCircle, LogOut, Shield, List, Inbox, Network, AlertTriangle } from 'lucide-react';
+import { Home, LoaderCircle, LogOut, Shield, List, Inbox, Network, AlertTriangle, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -69,6 +69,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <Link href="/admin">
                     <Home />
                     <span>Dashboard</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/analytics')} tooltip={{ children: 'Analytics' }}>
+                  <Link href="/admin/analytics">
+                    <BarChart3 />
+                    <span>Analytics</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
