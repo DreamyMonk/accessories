@@ -19,7 +19,23 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Label } from '@/components/ui/label';
 
-export function ContributeToGroupDialog({ result, open, onOpenChange, showContributorInput = false }: { result: any, open: boolean, onOpenChange: (open: boolean) => void, showContributorInput?: boolean }) {
+interface ContributeToGroupDialogProps {
+    isOpen: boolean;
+    onClose: () => void;
+    accessoryId: string;
+    accessoryType: string;
+    existingModels: string[];
+    showContributorInput?: boolean;
+}
+
+export function ContributeToGroupDialog({
+    isOpen,
+    onClose,
+    accessoryId,
+    accessoryType,
+    existingModels = [],
+    showContributorInput = false
+}: ContributeToGroupDialogProps) {
     const { toast } = useToast();
     const firestore = useFirestore();
     const { user } = useUser();
@@ -30,9 +46,9 @@ export function ContributeToGroupDialog({ result, open, onOpenChange, showContri
 
     // Fetch Master Models only when dialog is open
     const masterModelsQuery = useMemo(() => {
-        if (!firestore || !open) return null;
+        if (!firestore || !isOpen) return null;
         return query(collection(firestore, 'master_models'), orderBy('name', 'asc'));
-    }, [firestore, open]);
+    }, [firestore, isOpen]);
 
     const { data: masterModelDocs } = useCollection(masterModelsQuery);
 
@@ -40,6 +56,8 @@ export function ContributeToGroupDialog({ result, open, onOpenChange, showContri
         if (!masterModelDocs || searchTerm.length === 0) return [];
 
         const searchLower = searchTerm.toLowerCase();
+        // Safety: Ensure existingModels is an array
+        const safeExistingModels = Array.isArray(existingModels) ? existingModels : [];
 
         return masterModelDocs
             .map((doc: any) => doc.name as string)
@@ -48,14 +66,13 @@ export function ContributeToGroupDialog({ result, open, onOpenChange, showContri
                 if (!name.toLowerCase().includes(searchLower)) return false;
 
                 // 2. Must NOT be in the current group already
-                const isAlreadyInGroup = result.models.some((existing: any) => {
-                    const existingName = typeof existing === 'string' ? existing : existing.name;
-                    return existingName.toLowerCase() === name.toLowerCase();
-                });
+                const isAlreadyInGroup = safeExistingModels.some((existingName) =>
+                    existingName.toLowerCase() === name.toLowerCase()
+                );
 
                 return !isAlreadyInGroup;
             });
-    }, [masterModelDocs, searchTerm, result.models]);
+    }, [masterModelDocs, searchTerm, existingModels]);
 
     const showCustomModelInput = searchTerm.length > 0 && filteredModels.length === 0;
 
@@ -81,14 +98,14 @@ export function ContributeToGroupDialog({ result, open, onOpenChange, showContri
         setIsSubmitting(true);
 
         const contributionData: any = {
-            accessoryType: result.accessoryType,
+            accessoryType: accessoryType,
             models: [modelToSubmit],
             isNewModel: true,
             source: "User Contribution",
             status: "pending",
             submittedAt: serverTimestamp(),
             submittedBy: user.uid,
-            addToAccessoryId: result.id,
+            addToAccessoryId: accessoryId,
         };
 
         if (showContributorInput && contributorName.trim()) {
@@ -104,7 +121,7 @@ export function ContributeToGroupDialog({ result, open, onOpenChange, showContri
                 setSearchTerm('');
                 setContributorName('');
                 setIsSubmitting(false);
-                onOpenChange(false);
+                onClose();
             }).catch(error => {
                 const permissionError = new FirestorePermissionError({ path: contributionsCollectionRef.path, operation: 'create', requestResourceData: contributionData });
                 errorEmitter.emit('permission-error', permissionError);
@@ -115,7 +132,7 @@ export function ContributeToGroupDialog({ result, open, onOpenChange, showContri
 
     if (!user) {
         return (
-            <Dialog open={open} onOpenChange={onOpenChange}>
+            <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Contribute to this Group</DialogTitle>
@@ -136,12 +153,12 @@ export function ContributeToGroupDialog({ result, open, onOpenChange, showContri
     }
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Contribute to this Group</DialogTitle>
                     <DialogDescription>
-                        Found another model that's compatible with the <span className="font-semibold">{result.accessoryType}</span>? Add it here.
+                        Found another model that's compatible with the <span className="font-semibold">{accessoryType}</span>? Add it here.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
