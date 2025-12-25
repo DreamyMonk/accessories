@@ -47,6 +47,12 @@ export function ResultCard({
   const { toast } = useToast();
   const firestore = useFirestore();
 
+  // Defensive check: If result or models are missing, don't render.
+  // This prevents crashes if the database has malformed documents.
+  if (!result || !result.models || !Array.isArray(result.models)) {
+    return null;
+  }
+
   const getModelName = (model: any): string => {
     if (!model) return '';
     if (typeof model === 'string') return model;
