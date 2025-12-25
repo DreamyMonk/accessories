@@ -5,8 +5,14 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 export const metadata: Metadata = {
-  title: 'AccessoryAce',
-  description: 'Find compatible accessories for your mobile devices instantly.',
+  title: 'Fitmyphone - World\'s Largest Mobile Accessory Compatibility Database',
+  description: 'Find compatible accessories for any phone model instantly. Fitmyphone is the world\'s largest mobile accessory compatibility finder with the biggest database for tempered glass, cases, chargers, and more.',
+  keywords: 'phone accessories, mobile accessories, tempered glass compatibility, phone case finder, accessory compatibility, Fitmyphone',
+  openGraph: {
+    title: 'Fitmyphone - Find Compatible Accessories Instantly',
+    description: 'World\'s largest mobile accessory compatibility database. Search any phone model and find compatible tempered glass, cases, chargers and more.',
+    type: 'website',
+  },
 };
 
 export default function RootLayout({

@@ -444,10 +444,10 @@ export function SearchClient({ masterModels: initialMasterModels = DEFAULT_EMPTY
       <section id="search" className="scroll-mt-20">
         <div className="text-center mb-8">
           <h1 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
-            Accessory Compatibility Finder <span className="text-xs text-muted-foreground align-top">v1.2</span>
+            Accessory Compatibility Finder
           </h1>
-          <p className="text-muted-foreground mt-2">
-            Instantly find compatible accessories for any phone model.
+          <p className="text-muted-foreground mt-2 max-w-xl mx-auto">
+            Find compatible accessories for any phone model instantly from the world's largest database.
           </p>
         </div>
 

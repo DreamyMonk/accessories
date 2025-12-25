@@ -132,7 +132,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <header className="flex h-12 items-center justify-between border-b px-4 lg:hidden">
             <Link href="/" className="flex items-center gap-2">
               <Logo className="h-6 w-6 text-primary" />
-              <span className="font-semibold">AccessoryAce</span>
+              <span className="font-semibold">Fitmyphone</span>
             </Link>
             <SidebarTrigger />
           </header>
