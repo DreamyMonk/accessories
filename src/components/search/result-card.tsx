@@ -239,12 +239,10 @@ export function ResultCard({
               <Copy className="mr-2 h-4 w-4" />
               Copy List
             </Button>
-            {showContributorInput && (
-              <Button className="flex-1" onClick={() => setIsDialogOpen(true)}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Contribute
-              </Button>
-            )}
+            <Button className="flex-1" onClick={() => setIsDialogOpen(true)}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Contribute
+            </Button>
           </div>
         </CardFooter>
       </Card>
