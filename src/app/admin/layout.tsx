@@ -12,7 +12,7 @@ import {
   SidebarFooter,
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/logo';
-import { Home, LoaderCircle, LogOut, Shield, List, Inbox, Network } from 'lucide-react';
+import { Home, LoaderCircle, LogOut, Shield, List, Inbox, Network, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -93,6 +93,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <Link href="/admin/compatibility">
                     <Network />
                     <span>Compatibility</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/debug')} tooltip={{ children: 'Debug & Cleanup' }}>
+                  <Link href="/admin/debug">
+                    <AlertTriangle />
+                    <span>Debug & Cleanup</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
