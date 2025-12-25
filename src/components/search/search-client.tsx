@@ -373,16 +373,19 @@ export function SearchClient({ masterModels: initialMasterModels = DEFAULT_EMPTY
           <div className="flex justify-between items-center">
             <h2 className="font-headline text-2xl font-bold">{results.length} Result(s) Found</h2>
           </div>
-          {results.map((result, i) => (
-            <ResultCard
-              key={result.id}
-              result={{ ...result, lastUpdated: formatTimestamp(result.lastUpdated) }}
-              searchedModel={searchedTerm}
-              index={i}
-              showContributorInput={showContributorInput}
-              isAdmin={isAdmin}
-            />
-          ))}
+          {results.map((result, i) => {
+            if (!result || !result.models || !Array.isArray(result.models)) return null;
+            return (
+              <ResultCard
+                key={result.id || i}
+                result={{ ...result, lastUpdated: formatTimestamp(result.lastUpdated) }}
+                searchedModel={searchedTerm}
+                index={i}
+                showContributorInput={showContributorInput}
+                isAdmin={isAdmin}
+              />
+            );
+          })}
         </div>
       );
     }
@@ -441,7 +444,7 @@ export function SearchClient({ masterModels: initialMasterModels = DEFAULT_EMPTY
       <section id="search" className="scroll-mt-20">
         <div className="text-center mb-8">
           <h1 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
-            Accessory Compatibility Finder
+            Accessory Compatibility Finder <span className="text-xs text-muted-foreground align-top">v1.2</span>
           </h1>
           <p className="text-muted-foreground mt-2">
             Instantly find compatible accessories for any phone model.
