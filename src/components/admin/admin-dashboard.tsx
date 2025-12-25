@@ -8,6 +8,7 @@ import { MasterModelManager } from './master-model-manager';
 import { AddNewForm } from './add-new-form';
 import { BulkAddModelsForm } from './bulk-add-models-form';
 import { CategoryManager } from './category-manager';
+import { SearchClient } from "@/components/search/search-client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Archive, CheckCircle, Clock, Database, FileText, LayoutGrid, Plus, Smartphone, Users, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ export function AdminDashboard({ masterModels, submissions, models }: { masterMo
         <TabsTrigger value="master-models" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Master Models</TabsTrigger>
         <TabsTrigger value="add-new" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Add Data</TabsTrigger>
         <TabsTrigger value="categories" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Categories</TabsTrigger>
+        <TabsTrigger value="compatibility" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Compatibility Mode</TabsTrigger>
       </TabsList>
 
       <TabsContent value="overview" className="space-y-6">
@@ -163,6 +165,16 @@ export function AdminDashboard({ masterModels, submissions, models }: { masterMo
 
       <TabsContent value="categories">
         <CategoryManager />
+      </TabsContent>
+
+      <TabsContent value="compatibility">
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Compatibility Manager</h2>
+            <p className="text-muted-foreground">Search and manage compatibility chains. You can edit names or delete models from groups.</p>
+          </div>
+          <SearchClient isAdmin={true} />
+        </div>
       </TabsContent>
 
     </Tabs>

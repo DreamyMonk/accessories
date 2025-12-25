@@ -81,6 +81,7 @@ export function BulkAddModelsForm() {
 
             const batch = writeBatch(firestore);
             let operationsCount = 0;
+            const updatesByAccessory: Record<string, any[]> = {};
 
             for (const line of lines) {
                 const values = line.split(',').map(v => v.trim());
@@ -89,7 +90,9 @@ export function BulkAddModelsForm() {
                 const rawContributorData = contributorNameIndex !== -1 ? values[contributorNameIndex] : '';
 
                 if (accessoryId && rawModelData) {
-                    const accessoryRef = doc(firestore, 'accessories', accessoryId);
+                    if (!updatesByAccessory[accessoryId]) {
+                        updatesByAccessory[accessoryId] = [];
+                    }
 
                     // Split by pipe '|' and filter empty strings
                     const models = rawModelData.split('|').map(m => m.trim()).filter(Boolean);
@@ -102,13 +105,19 @@ export function BulkAddModelsForm() {
                         if (contributorName) {
                             modelObject.contributorName = contributorName;
                         }
-                        // Note: arrayUnion might not work perfectly with multiple identical updates in same batch but different objects
-                        // However, assuming unique model names per batch for simplicty or relying on Firestore behavior.
-                        batch.set(accessoryRef, { models: arrayUnion(modelObject) }, { merge: true });
+
+                        updatesByAccessory[accessoryId].push(modelObject);
                         operationsCount++;
                     });
                 }
             }
+
+            // Apply batched updates
+            Object.entries(updatesByAccessory).forEach(([accessoryId, models]) => {
+                const accessoryRef = doc(firestore, 'accessories', accessoryId);
+                // Use spread to add all models at once
+                batch.set(accessoryRef, { models: arrayUnion(...models) }, { merge: true });
+            });
 
             try {
                 await batch.commit();
