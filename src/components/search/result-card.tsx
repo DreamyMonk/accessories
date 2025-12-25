@@ -12,7 +12,7 @@ import { ContributeToGroupDialog } from '@/components/contribute/contribute-to-g
 import { ContributorInfo } from './contributor-info';
 import { ModelContribution } from '@/lib/types';
 import { useFirestore } from '@/firebase';
-import { doc, updateDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
+import { doc, updateDoc, arrayRemove, arrayUnion, deleteDoc } from 'firebase/firestore';
 import {
   Dialog,
   DialogContent,
@@ -61,6 +61,19 @@ export function ResultCard({
     return undefined;
   }
 
+  const handleDeleteGroup = async () => {
+    if (!isAdmin || !firestore) return;
+    if (confirm("Are you sure you want to delete this entire compatibility group? This action cannot be undone.")) {
+      try {
+        const docRef = doc(firestore, 'accessories', result.id);
+        await deleteDoc(docRef);
+        toast({ title: "Group Deleted", description: "The accessory group has been permanently removed." });
+      } catch (e) {
+        toast({ title: "Error", description: "Failed to delete group.", variant: "destructive" });
+      }
+    }
+  };
+
   const handleDelete = async (modelToDelete: any) => {
     if (!isAdmin || !firestore) return;
     if (!confirm(`Are you sure you want to delete "${getModelName(modelToDelete)}"?`)) return;
@@ -71,7 +84,6 @@ export function ResultCard({
         models: arrayRemove(modelToDelete)
       });
       toast({ title: "Deleted", description: "Model removed from group." });
-      // UI update happens via realtime listener in parent
     } catch (err) {
       console.error(err);
       toast({ title: "Error", description: "Failed to delete.", variant: "destructive" });
@@ -91,17 +103,11 @@ export function ResultCard({
     try {
       const ref = doc(firestore, 'accessories', result.id);
 
-      // Remove old, add new. 
-      // Note: This loses contributor info if we don't preserve it. We should preserve it.
       const newModelObj = typeof editingModel === 'string'
         ? newModelName
-        : { ...editingModel, name: newModelName }; // Preserve other fields like contributorUid/Name
+        : { ...editingModel, name: newModelName };
 
       const batchUpdate = async () => {
-        // We can't do exact atomic swap easily in one update call unless we use runTransaction
-        // For simplicity/speed in admin, parallel arrayRemove/Union in one update call?
-        // No, arrayRemove and arrayUnion in same update works, but if old and new are same? 
-        // If name unchanged, do nothing.
         if (getModelName(editingModel) === newModelName) return;
 
         await updateDoc(ref, {
@@ -169,17 +175,24 @@ export function ResultCard({
         style={{ animationDelay: `${index * 100}ms` }}
       >
         <CardHeader>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
+          <div className="flex justify-between items-start">
+            <div className="flex-1">
               <div className="flex items-center gap-2">
-                <CardTitle className="font-headline text-xl uppercase tracking-wider">{mainModelName}</CardTitle>
-                <AdminActions model={mainModelObj} />
+                <div className="flex items-center gap-2">
+                  <CardTitle className="font-headline text-xl uppercase tracking-wider">{mainModelName}</CardTitle>
+                  <AdminActions model={mainModelObj} />
+                </div>
+                <ContributorInfo uid={mainModelContributor} variant="compact" />
               </div>
-              <ContributorInfo uid={mainModelContributor} variant="compact" />
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="secondary">{result.accessoryType}</Badge>
+              </div>
             </div>
-            <div className="flex items-center gap-2 mt-1">
-              <Badge variant="secondary">{result.accessoryType}</Badge>
-            </div>
+            {isAdmin && (
+              <Button variant="destructive" size="sm" onClick={handleDeleteGroup} className="ml-4">
+                Delete Group
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -214,31 +227,52 @@ export function ResultCard({
             <p className="text-sm text-muted-foreground">No other compatible models have been added for this group yet.</p>
           )}
         </CardContent>
-        <Separator className="my-4" />
-        <CardFooter className="flex-col items-start gap-4">
-          <div className="w-full grid grid-cols-2 gap-2">
-            <Button variant="secondary" onClick={handleCopy}><Copy className="mr-2 h-4 w-4" /> Copy List</Button>
-            <Button variant="outline" onClick={() => setIsDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> Contribute</Button>
+        <CardFooter>
+          <div className="flex w-full gap-2">
+            <Button variant="outline" className="flex-1" onClick={handleCopy}>
+              <Copy className="mr-2 h-4 w-4" />
+              Copy List
+            </Button>
+            {showContributorInput && (
+              <Button className="flex-1" onClick={() => setIsDialogOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Contribute
+              </Button>
+            )}
           </div>
-          <Separator className="my-4" />
-          <ContributorInfo uid={result.contributor?.uid} points={result.contributor?.points} />
-          <ContributeToGroupDialog result={result} open={isDialogOpen} onOpenChange={setIsDialogOpen} showContributorInput={showContributorInput} />
         </CardFooter>
       </Card>
+
+      <ContributeToGroupDialog
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        accessoryId={result.id}
+        accessoryType={result.accessoryType}
+        existingModels={result.models.map(getModelName)}
+      />
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Model Name</DialogTitle>
-            <DialogDescription>Modify the model name in this compatibility group.</DialogDescription>
+            <DialogTitle>Edit Model</DialogTitle>
+            <DialogDescription>
+              Update the model name. This changes it for all searches.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 py-4">
-            <Label>Model Name</Label>
-            <Input value={newModelName} onChange={(e) => setNewModelName(e.target.value)} />
+          <div className="py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="modelName">Model Name</Label>
+              <Input
+                id="modelName"
+                value={newModelName}
+                onChange={(e) => setNewModelName(e.target.value)}
+                placeholder="Enter model name"
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
-            <Button onClick={handleUpdate} disabled={isUpdating || !newModelName.trim()}>
+            <Button onClick={handleUpdate} disabled={isUpdating}>
               {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Changes
             </Button>
