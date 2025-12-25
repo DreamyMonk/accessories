@@ -14,9 +14,7 @@ async function getMasterModels() {
   }
 }
 
-export default async function ContributePage() {
-  const masterModels = await getMasterModels();
-
+export default function ContributePage() {
   return (
     <AppLayout>
       <div className="container mx-auto px-4 py-8">
@@ -26,7 +24,7 @@ export default async function ContributePage() {
             Help other shop owners by adding compatible models. You earn points for every approved contribution!
           </p>
         </div>
-        <ContributionFlow masterModels={masterModels} />
+        <ContributionFlow />
       </div>
     </AppLayout>
   );

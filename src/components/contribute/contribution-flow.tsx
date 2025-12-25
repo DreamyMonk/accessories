@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { SearchClient } from '@/components/search/search-client';
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, LoaderCircle, CheckCircle2 } from 'lucide-react';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Combobox } from '@/components/ui/combobox';
@@ -15,7 +15,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export function ContributionFlow({ masterModels }: { masterModels: string[] }) {
+export function ContributionFlow() {
     const [activeTab, setActiveTab] = useState("existing");
     const [inputs, setInputs] = useState<string[]>(['', '']); // Start with 2 inputs
     const [accessoryType, setAccessoryType] = useState('');
@@ -35,6 +35,18 @@ export function ContributionFlow({ masterModels }: { masterModels: string[] }) {
         });
         return () => unsubscribe();
     }, [firestore]);
+
+    // Fetch Master Models
+    const masterModelsQuery = useMemo(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'master_models'), orderBy('name', 'asc'));
+    }, [firestore]);
+
+    const { data: masterModelDocs } = useCollection(masterModelsQuery);
+
+    const masterModels = useMemo(() => {
+        return masterModelDocs?.map(d => d.name as string) || [];
+    }, [masterModelDocs]);
 
     const handleAddInput = () => {
         setInputs([...inputs, '']);
@@ -126,7 +138,7 @@ export function ContributionFlow({ masterModels }: { masterModels: string[] }) {
                     <p className="text-muted-foreground">Search for a model to see compatibility groups, then add your model to it.</p>
                 </div>
                 {/* Reuse Search Client */}
-                <SearchClient masterModels={masterModels} />
+                <SearchClient />
             </TabsContent>
 
             <TabsContent value="new" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
