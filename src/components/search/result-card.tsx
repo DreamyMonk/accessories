@@ -67,6 +67,11 @@ export function ResultCard({
     return undefined;
   }
 
+  const getContributorName = (model: any): string | undefined => {
+    if (typeof model === 'object' && model !== null) return model.contributorName;
+    return undefined;
+  }
+
   const handleDeleteGroup = async () => {
     if (!isAdmin || !firestore) return;
     if (confirm("Are you sure you want to delete this entire compatibility group? This action cannot be undone.")) {
@@ -210,6 +215,9 @@ export function ResultCard({
                   <li key={i} className={cn("flex items-center gap-2 animate-slide-up-fade")} style={{ animationDelay: `${(index * 100) + (i * 50)}ms` }}>
                     <Check className="h-5 w-5 text-green-500" />
                     <span>{getModelName(model)}</span>
+                    {getContributorName(model) && (
+                      <span className="text-xs text-muted-foreground">(by {getContributorName(model)})</span>
+                    )}
                     <ContributorInfo uid={getContributorUid(model)} variant="compact" />
                     <AdminActions model={model} />
                   </li>
@@ -218,6 +226,9 @@ export function ResultCard({
                   <li key={i} className="flex items-center gap-2 animate-slide-up-fade" style={{ animationDelay: '0ms' }}>
                     <Check className="h-5 w-5 text-green-500" />
                     <span>{getModelName(model)}</span>
+                    {getContributorName(model) && (
+                      <span className="text-xs text-muted-foreground">(by {getContributorName(model)})</span>
+                    )}
                     <ContributorInfo uid={getContributorUid(model)} variant="compact" />
                     <AdminActions model={model} />
                   </li>
