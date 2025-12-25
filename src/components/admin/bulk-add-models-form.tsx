@@ -104,7 +104,7 @@ export function BulkAddModelsForm() {
                         }
                         // Note: arrayUnion might not work perfectly with multiple identical updates in same batch but different objects
                         // However, assuming unique model names per batch for simplicty or relying on Firestore behavior.
-                        batch.update(accessoryRef, { models: arrayUnion(modelObject) });
+                        batch.set(accessoryRef, { models: arrayUnion(modelObject) }, { merge: true });
                         operationsCount++;
                     });
                 }

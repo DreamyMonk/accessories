@@ -5,7 +5,6 @@ import { collection, getDocs, query, orderBy, getFirestore } from "firebase/fire
 import { useFirestore } from "@/firebase";
 import { useEffect, useState } from "react";
 import { LoaderCircle } from "lucide-react";
-import { getMasterModels } from "./master-models/actions";
 
 export default function AdminPage() {
   const firestore = useFirestore();
@@ -20,8 +19,9 @@ export default function AdminPage() {
 
       try {
         // Fetch Master Models
-        const mm = await getMasterModels();
-        setMasterModels(mm);
+        const mmRef = collection(firestore, 'master_models');
+        const mmSnapshot = await getDocs(query(mmRef, orderBy('name', 'asc')));
+        setMasterModels(mmSnapshot.docs.map(doc => doc.data().name as string));
 
         // Fetch Submissions
         const submissionsRef = collection(firestore, 'contributions');
