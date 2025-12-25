@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
     // Update this to your deployed domain
-    const baseUrl = 'https://fitmyphone.vercel.app';
+    const baseUrl = 'https://fitmyphone.in';
 
     return [
         {
