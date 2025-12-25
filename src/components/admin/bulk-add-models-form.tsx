@@ -1,19 +1,33 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useFirestore } from '@/firebase';
-import { doc, writeBatch, arrayUnion } from 'firebase/firestore';
+import { doc, writeBatch, arrayUnion, query, collection, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle, Upload, Download } from 'lucide-react';
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function BulkAddModelsForm() {
     const [file, setFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [categories, setCategories] = useState<any[]>([]);
+    const [selectedCategory, setSelectedCategory] = useState<string>("");
+
     const firestore = useFirestore();
     const { toast } = useToast();
+
+    useEffect(() => {
+        if (!firestore) return;
+        const q = query(collection(firestore, "categories"), orderBy("name", "asc"));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setCategories(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+        return () => unsubscribe();
+    }, [firestore]);
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files) {
@@ -49,6 +63,15 @@ export function BulkAddModelsForm() {
             toast({
                 title: 'Error',
                 description: 'Please select a file and ensure you are connected.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        if (!selectedCategory) {
+            toast({
+                title: 'Category Required',
+                description: 'Please select an accessory category for this batch.',
                 variant: 'destructive',
             });
             return;
@@ -115,8 +138,12 @@ export function BulkAddModelsForm() {
             // Apply batched updates
             Object.entries(updatesByAccessory).forEach(([accessoryId, models]) => {
                 const accessoryRef = doc(firestore, 'accessories', accessoryId);
-                // Use spread to add all models at once
-                batch.set(accessoryRef, { models: arrayUnion(...models) }, { merge: true });
+                // Use spread to add all models at once, AND set accessoryType
+                batch.set(accessoryRef, {
+                    models: arrayUnion(...models),
+                    accessoryType: selectedCategory,
+                    lastUpdated: serverTimestamp()
+                }, { merge: true });
             });
 
             try {
@@ -148,7 +175,7 @@ export function BulkAddModelsForm() {
                     <div>
                         <CardTitle className="font-headline text-xl">Bulk Add Models via CSV</CardTitle>
                         <CardDescription>
-                            Upload a CSV file to add multiple models to existing accessory groups.
+                            Upload a CSV file to add multiple models to existing or new accessory groups.
                         </CardDescription>
                     </div>
                     <Button variant="outline" size="sm" onClick={handleDownloadSample}>
@@ -157,37 +184,53 @@ export function BulkAddModelsForm() {
                 </div>
             </CardHeader>
             <CardContent>
-                <div className="flex flex-col sm:flex-row gap-4 items-center">
-                    <Input
-                        type="file"
-                        accept=".csv"
-                        onChange={handleFileChange}
-                        disabled={isUploading}
-                        className="flex-grow"
-                    />
-                    <Button
-                        onClick={handleUpload}
-                        disabled={!file || isUploading}
-                        className="w-full sm:w-auto"
-                    >
-                        {isUploading ? (
-                            <>
-                                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                                Uploading...
-                            </>
-                        ) : (
-                            <>
-                                <Upload className="mr-2 h-4 w-4" />
-                                Upload CSV
-                            </>
-                        )}
-                    </Button>
+                <div className="space-y-4">
+                    <div className="space-y-2">
+                        <Label>Accessory Category</Label>
+                        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select Category for this Batch..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {categories.map(cat => (
+                                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-4 items-center">
+                        <Input
+                            type="file"
+                            accept=".csv"
+                            onChange={handleFileChange}
+                            disabled={isUploading}
+                            className="flex-grow"
+                        />
+                        <Button
+                            onClick={handleUpload}
+                            disabled={!file || isUploading}
+                            className="w-full sm:w-auto"
+                        >
+                            {isUploading ? (
+                                <>
+                                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                                    Uploading...
+                                </>
+                            ) : (
+                                <>
+                                    <Upload className="mr-2 h-4 w-4" />
+                                    Upload CSV
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                        Recommended Columns: <code>model</code>, <code>accessoryId</code>, <code>contributorName</code>.
+                        <br />
+                        Use <code>|</code> to separate multiple models or contributors in a single row.
+                    </p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                    Recommended Columns: <code>model</code>, <code>accessoryId</code>, <code>contributorName</code>.
-                    <br />
-                    Use <code>|</code> to separate multiple models or contributors in a single row.
-                </p>
             </CardContent>
         </Card>
     );
