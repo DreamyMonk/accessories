@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="85" fill="#0B84FF"/>
+  <g transform="translate(85, 64)">
+    <!-- Phone outline -->
+    <rect x="85" y="21" width="171" height="320" rx="21" fill="white"/>
+    <rect x="106" y="43" width="128" height="235" rx="11" fill="#0B84FF"/>
+    <!-- Checkmark -->
+    <circle cx="170" cy="149" r="75" fill="white"/>
+    <path d="M133 149 L160 176 L207 128" stroke="#0B84FF" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <!-- Home button -->
+    <circle cx="170" cy="309" r="16" fill="#0B84FF"/>
+  </g>
+</svg>
