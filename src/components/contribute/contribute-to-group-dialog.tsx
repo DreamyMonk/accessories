@@ -1,7 +1,7 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useUser, useFirestore } from '@/firebase';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { useState, useEffect, useMemo } from 'react';
+import { useUser, useFirestore, useCollection } from '@/firebase';
+import { addDoc, collection, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import Link from 'next/link';
 import {
     Dialog,
@@ -28,9 +28,34 @@ export function ContributeToGroupDialog({ result, open, onOpenChange, showContri
     const [contributorName, setContributorName] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const filteredModels = result.models.filter((model: any) => {
-        return typeof model === 'string' && model.toLowerCase().includes(searchTerm.toLowerCase());
-    });
+    // Fetch Master Models only when dialog is open
+    const masterModelsQuery = useMemo(() => {
+        if (!firestore || !open) return null;
+        return query(collection(firestore, 'master_models'), orderBy('name', 'asc'));
+    }, [firestore, open]);
+
+    const { data: masterModelDocs } = useCollection(masterModelsQuery);
+
+    const filteredModels = useMemo(() => {
+        if (!masterModelDocs || searchTerm.length === 0) return [];
+
+        const searchLower = searchTerm.toLowerCase();
+
+        return masterModelDocs
+            .map((doc: any) => doc.name as string)
+            .filter((name) => {
+                // 1. Must match search term
+                if (!name.toLowerCase().includes(searchLower)) return false;
+
+                // 2. Must NOT be in the current group already
+                const isAlreadyInGroup = result.models.some((existing: any) => {
+                    const existingName = typeof existing === 'string' ? existing : existing.name;
+                    return existingName.toLowerCase() === name.toLowerCase();
+                });
+
+                return !isAlreadyInGroup;
+            });
+    }, [masterModelDocs, searchTerm, result.models]);
 
     const showCustomModelInput = searchTerm.length > 0 && filteredModels.length === 0;
 
