@@ -12,7 +12,7 @@ import {
   SidebarFooter,
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/logo';
-import { Home, LoaderCircle, LogOut, Shield, List, Inbox } from 'lucide-react';
+import { Home, LoaderCircle, LogOut, Shield, List, Inbox, Network } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -29,7 +29,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const adminLoggedIn = localStorage.getItem('isAdminLoggedIn') === 'true';
     setIsLoggedIn(adminLoggedIn);
     setIsLoading(false);
-    
+
     if (!adminLoggedIn && pathname !== '/admin/login') {
       router.push('/admin/login');
     }
@@ -51,8 +51,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (pathname === '/admin/login') {
     return <>{children}</>;
   }
-  
-  if(isLoggedIn) {
+
+  if (isLoggedIn) {
     return (
       <SidebarProvider>
         <Sidebar>
@@ -64,52 +64,60 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
-                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/admin'} tooltip={{ children: 'Dashboard' }}>
-                    <Link href="/admin">
-                      <Home />
-                      <span>Dashboard</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/submissions')} tooltip={{ children: 'Submissions' }}>
-                    <Link href="/admin/submissions">
-                      <Inbox />
-                      <span>Submissions</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/master-models')} tooltip={{ children: 'Master Models' }}>
-                    <Link href="/admin/master-models">
-                      <List />
-                      <span>Master Models</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/'} tooltip={{ children: 'Back to App' }}>
-                    <Link href="/">
-                      <Shield />
-                      <span>Back to App</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/admin'} tooltip={{ children: 'Dashboard' }}>
+                  <Link href="/admin">
+                    <Home />
+                    <span>Dashboard</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/submissions')} tooltip={{ children: 'Submissions' }}>
+                  <Link href="/admin/submissions">
+                    <Inbox />
+                    <span>Submissions</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/master-models')} tooltip={{ children: 'Master Models' }}>
+                  <Link href="/admin/master-models">
+                    <List />
+                    <span>Master Models</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/compatibility')} tooltip={{ children: 'Compatibility' }}>
+                  <Link href="/admin/compatibility">
+                    <Network />
+                    <span>Compatibility</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/'} tooltip={{ children: 'Back to App' }}>
+                  <Link href="/">
+                    <Shield />
+                    <span>Back to App</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
-              <div className="flex items-center gap-2">
-                <Avatar>
-                  <AvatarFallback>A</AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col">
-                  <span className="text-sm font-semibold">Admin</span>
-                   <Button variant="link" size="sm" className="h-auto p-0 text-xs text-muted-foreground" onClick={handleSignOut}>
-                    Sign Out
-                  </Button>
-                </div>
+            <div className="flex items-center gap-2">
+              <Avatar>
+                <AvatarFallback>A</AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold">Admin</span>
+                <Button variant="link" size="sm" className="h-auto p-0 text-xs text-muted-foreground" onClick={handleSignOut}>
+                  Sign Out
+                </Button>
               </div>
+            </div>
           </SidebarFooter>
         </Sidebar>
         <SidebarInset>
@@ -125,6 +133,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </SidebarProvider>
     );
   }
-  
+
   return null;
 }
