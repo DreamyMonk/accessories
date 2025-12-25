@@ -12,11 +12,11 @@ export function Header() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2">
-          <Logo className="h-8 w-8" />
+          <Logo className="h-8 w-8 text-primary" />
+          <span className="font-headline text-lg font-semibold text-foreground hidden sm:block">
+            Fitmyphone
+          </span>
         </Link>
-        <h1 className="font-headline text-lg font-semibold text-center text-foreground hidden sm:block">
-          Fitmyphone
-        </h1>
         <div className="flex items-center gap-2">
           {!loading &&
             (user ? (

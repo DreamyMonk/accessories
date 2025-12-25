@@ -493,9 +493,6 @@ export function SearchClient({ masterModels: initialMasterModels = DEFAULT_EMPTY
                     </>
                   )}
                 </Button>
-                <p className="text-sm text-center text-muted-foreground">
-                  Enter a model to see auto-suggestions.
-                </p>
               </form>
             </Form>
           </CardContent>
