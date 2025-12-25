@@ -36,10 +36,10 @@ export function BulkAddModelsForm() {
     };
 
     const handleDownloadSample = () => {
-        const headers = ['model', 'accessoryId', 'contributorName'];
+        const headers = ['model', 'category', 'accessoryId', 'contributorName'];
         const sampleData = [
-            ['iPhone 13|iPhone 13 Pro', 'replace-with-accessory-id', 'John Doe|Jane Smith'],
-            ['Samsung Galaxy S22', 'replace-with-accessory-id', ''],
+            ['iPhone 13|iPhone 13 Pro', 'Silicone Case', '', 'John Doe'],
+            ['Samsung Galaxy S22', 'Tempered Glass', '', ''],
         ];
 
         const csvContent = [
@@ -68,15 +68,6 @@ export function BulkAddModelsForm() {
             return;
         }
 
-        if (!selectedCategory) {
-            toast({
-                title: 'Category Required',
-                description: 'Please select an accessory category for this batch.',
-                variant: 'destructive',
-            });
-            return;
-        }
-
         setIsUploading(true);
 
         const reader = new FileReader();
@@ -91,9 +82,9 @@ export function BulkAddModelsForm() {
             }
             const header = headerLine.split(',').map(h => h.trim());
 
-            const requiredHeaders = ['accessoryId', 'model'];
-            if (!requiredHeaders.every(h => header.includes(h))) {
-                toast({ title: 'Error', description: `CSV must contain the following headers: ${requiredHeaders.join(', ')}`, variant: 'destructive' });
+            // Check required fields (Only model is strictly required now)
+            if (!header.includes('model')) {
+                toast({ title: 'Error', description: `CSV must contain a 'model' header.`, variant: 'destructive' });
                 setIsUploading(false);
                 return;
             }
@@ -101,20 +92,34 @@ export function BulkAddModelsForm() {
             const accessoryIdIndex = header.indexOf('accessoryId');
             const modelIndex = header.indexOf('model');
             const contributorNameIndex = header.indexOf('contributorName');
+            const categoryIndex = header.indexOf('category');
 
             const batch = writeBatch(firestore);
             let operationsCount = 0;
-            const updatesByAccessory: Record<string, any[]> = {};
+            // Store models AND optional type per accessory
+            const updatesByAccessory: Record<string, { models: any[], type?: string }> = {};
 
             for (const line of lines) {
                 const values = line.split(',').map(v => v.trim());
-                const accessoryId = values[accessoryIdIndex];
+                if (values.length <= modelIndex) continue;
+
+                let accessoryId = accessoryIdIndex !== -1 ? values[accessoryIdIndex] : '';
                 const rawModelData = values[modelIndex];
                 const rawContributorData = contributorNameIndex !== -1 ? values[contributorNameIndex] : '';
+                const categoryFromCsv = categoryIndex !== -1 ? values[categoryIndex] : '';
 
-                if (accessoryId && rawModelData) {
+                // If no ID provided, generate a new one for this row.
+                if (!accessoryId) {
+                    accessoryId = doc(collection(firestore, 'accessories')).id;
+                }
+
+                if (rawModelData) {
                     if (!updatesByAccessory[accessoryId]) {
-                        updatesByAccessory[accessoryId] = [];
+                        updatesByAccessory[accessoryId] = { models: [] };
+                    }
+
+                    if (categoryFromCsv) {
+                        updatesByAccessory[accessoryId].type = categoryFromCsv;
                     }
 
                     // Split by pipe '|' and filter empty strings
@@ -122,35 +127,42 @@ export function BulkAddModelsForm() {
                     const contributors = rawContributorData ? rawContributorData.split('|').map(c => c.trim()) : [];
 
                     models.forEach((modelName, index) => {
-                        const contributorName = contributors[index] || contributors[0] || undefined; // Use specific index, fallback to first, or undefined
+                        const contributorName = contributors[index] || contributors[0] || undefined;
 
                         const modelObject: any = { name: modelName };
                         if (contributorName) {
                             modelObject.contributorName = contributorName;
                         }
 
-                        updatesByAccessory[accessoryId].push(modelObject);
+                        updatesByAccessory[accessoryId].models.push(modelObject);
                         operationsCount++;
                     });
                 }
             }
 
             // Apply batched updates
-            Object.entries(updatesByAccessory).forEach(([accessoryId, models]) => {
+            Object.entries(updatesByAccessory).forEach(([accessoryId, data]) => {
                 const accessoryRef = doc(firestore, 'accessories', accessoryId);
-                // Use spread to add all models at once, AND set accessoryType
-                batch.set(accessoryRef, {
-                    models: arrayUnion(...models),
-                    accessoryType: selectedCategory,
+
+                const payload: any = {
+                    models: arrayUnion(...data.models),
                     lastUpdated: serverTimestamp()
-                }, { merge: true });
+                };
+
+                // Priority: CSV Category > Dropdown Category
+                const typeToSave = data.type || selectedCategory;
+                if (typeToSave) {
+                    payload.accessoryType = typeToSave;
+                }
+
+                batch.set(accessoryRef, payload, { merge: true });
             });
 
             try {
                 await batch.commit();
                 toast({
                     title: 'Upload Successful',
-                    description: `${operationsCount} models have been added to their respective accessory groups.`,
+                    description: `${operationsCount} models have been added.`,
                 });
             } catch (error) {
                 console.error("Error bulk adding models:", error);
@@ -175,7 +187,8 @@ export function BulkAddModelsForm() {
                     <div>
                         <CardTitle className="font-headline text-xl">Bulk Add Models via CSV</CardTitle>
                         <CardDescription>
-                            Upload a CSV file to add multiple models to existing or new accessory groups.
+                            Upload a CSV file to add models. 'accessoryId' is optional; if omitted, new groups are created.
+                            You can specify 'category' in CSV or select one below.
                         </CardDescription>
                     </div>
                     <Button variant="outline" size="sm" onClick={handleDownloadSample}>
@@ -186,10 +199,10 @@ export function BulkAddModelsForm() {
             <CardContent>
                 <div className="space-y-4">
                     <div className="space-y-2">
-                        <Label>Accessory Category</Label>
+                        <Label>Default Category (Optional if in CSV)</Label>
                         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                             <SelectTrigger>
-                                <SelectValue placeholder="Select Category for this Batch..." />
+                                <SelectValue placeholder="Select Default Category..." />
                             </SelectTrigger>
                             <SelectContent>
                                 {categories.map(cat => (
@@ -226,9 +239,10 @@ export function BulkAddModelsForm() {
                         </Button>
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">
-                        Recommended Columns: <code>model</code>, <code>accessoryId</code>, <code>contributorName</code>.
+                        Required Columns: <code>model</code>.
+                        Optional: <code>category</code>, <code>accessoryId</code>, <code>contributorName</code>.
                         <br />
-                        Use <code>|</code> to separate multiple models or contributors in a single row.
+                        Use <code>|</code> to separate multiple models in a single row (Auto-groups them).
                     </p>
                 </div>
             </CardContent>
