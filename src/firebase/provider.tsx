@@ -1,15 +1,14 @@
-
-'use client';
-
 import { createContext, useContext, ReactNode } from 'react';
 import { FirebaseApp } from 'firebase/app';
 import { Auth } from 'firebase/auth';
 import { Firestore } from 'firebase/firestore';
+import { Messaging } from 'firebase/messaging';
 
 interface FirebaseContextValue {
   firebaseApp: FirebaseApp | null;
   auth: Auth | null;
   firestore: Firestore | null;
+  messaging: Messaging | null;
 }
 
 const FirebaseContext = createContext<FirebaseContextValue | undefined>(
@@ -60,4 +59,10 @@ export const useFirestore = () => {
     throw new Error('Firestore not available.');
   }
   return firestore;
+};
+
+export const useMessaging = () => {
+  const { messaging } = useFirebase();
+  // Messaging might be null on server or unsupported browsers
+  return messaging;
 };

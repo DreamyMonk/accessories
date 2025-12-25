@@ -3,6 +3,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
+import { PushNotificationManager } from '@/components/push-notification-manager';
 
 export const metadata: Metadata = {
   title: 'Fitmyphone - World\'s Largest Mobile Accessory Compatibility Database',
@@ -49,6 +50,7 @@ export default function RootLayout({
           <FirebaseErrorListener />
           {children}
           <Toaster />
+          <PushNotificationManager />
         </FirebaseClientProvider>
       </body>
     </html>
